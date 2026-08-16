@@ -146,18 +146,37 @@ comparisons are unsigned.
 
 ### 3.0 Case sets
 
-A postcondition that **explicitly names a set of opcodes or an indexed family** is tested once
-per named member; the members are its *case set*. A postcondition stating one uniform rule
-without naming alternatives has a single case.
+A postcondition's *case set* is the product of two frozen rules. A postcondition matching
+neither has a single case.
 
-The rule exists because a composite postcondition can otherwise be satisfied by exercising
-one alternative and ignoring the rest — `SEM-CMP-1` could be discharged by testing `GT`
-alone, leaving a defect in `LT` untouched by a plan that nonetheless claims completeness.
-The rule is uniform and does not consult the defect catalog: it keys on whether the
-postcondition's own text names alternatives, not on where a defect might live.
+```text
+(i)  OPCODE ALTERNATIVES
+     the postcondition explicitly names a set of opcodes or an indexed
+     family  ->  one case per named member
 
-`SEM-DEC-1` therefore has one case despite ranging over every non-`PUSH` opcode: it states a
-single uniform rule and names no alternatives.
+(ii) SEMANTIC PARTITION
+     the postcondition's truth is given piecewise over a finite set of
+     explicitly named conditions  ->  one case per piece
+
+     case set = (i) x (ii) when both apply
+```
+
+Rule (i) alone was not enough, and the gap it left was serious. `SEM-RET-1` — *the caller
+pushes 1 for a `NORMAL` result and 0 for an `EXCEPTIONAL` one* — names no opcodes, so it had
+exactly one case. A plan that discharged it with a `NORMAL` result would stay green under D4
+sited on the caller side, and **the preregistered prediction "D4 fails locally" would not have
+followed from the plan at all.** It now yields `SEM-RET-1/NORMAL` and
+`SEM-RET-1/EXCEPTIONAL`, and D4 is forced red by construction rather than by hope.
+
+Branch completion does not rescue this. A defect that *removes* the discriminating branch
+leaves no branch for `LT-BR-*` to cover — which is exactly what absence defects do. Coverage
+of the implementation's branches is not a substitute for coverage of the specification's
+partition, and this rule is what keeps the second from silently depending on the first.
+
+Both rules key on the postcondition's own text — which opcodes it names, which conditions it
+distinguishes — and neither consults the defect catalog. `SEM-DEC-1` still has one case
+despite ranging over every non-`PUSH` opcode: it states one uniform rule, names no opcodes,
+and distinguishes no conditions.
 
 ### 3.1 Level A
 
@@ -175,15 +194,15 @@ single uniform rule and names no alternatives.
 | `SEM-STK-6` | U-STK | `DUP1`…`DUP16`, `SWAP1`…`SWAP16` | insufficient depth halts exceptionally |
 | `SEM-STK-7` | U-STK | 1 | a push beyond depth 1024 halts exceptionally |
 | `SEM-ARI-1` | U-ARI | `ADD` `SUB` `MUL` `DIV` `MOD` | operands are popped as `a` then `b`; the result is `a OP b` |
-| `SEM-ARI-2` | U-ARI | `ADD` `SUB` `MUL` | the result wraps modulo 2²⁵⁶ |
-| `SEM-ARI-3` | U-ARI | 1 | `DIV` with `b = 0` yields 0; otherwise floor division |
-| `SEM-ARI-4` | U-ARI | 1 | `MOD` with `b = 0` yields 0; otherwise `a mod b` |
-| `SEM-CMP-1` | U-CMP | `LT` `GT` | compares unsigned and yields 1 or 0 |
-| `SEM-CMP-2` | U-CMP | 1 | `EQ` yields 1 iff the operands are equal |
-| `SEM-CMP-3` | U-CMP | 1 | `ISZERO` yields 1 iff the operand is 0 |
-| `SEM-JMP-1` | U-JMP | 1 | the jumpdest set is every offset holding `0x5B` not inside a `PUSH` immediate |
-| `SEM-JMP-2` | U-JMP | 1 | `JUMP` to an offset outside the jumpdest set halts exceptionally |
-| `SEM-JMP-3` | U-JMP | 1 | `JUMPI` transfers control iff its condition operand is non-zero |
+| `SEM-ARI-2` | U-ARI | {`ADD` `SUB` `MUL`} × {`WRAP`, `NO_WRAP`} | the result wraps modulo 2²⁵⁶ |
+| `SEM-ARI-3` | U-ARI | `ZERO_DIVISOR`, `NONZERO_DIVISOR` | `DIV` with `b = 0` yields 0; otherwise floor division |
+| `SEM-ARI-4` | U-ARI | `ZERO_DIVISOR`, `NONZERO_DIVISOR` | `MOD` with `b = 0` yields 0; otherwise `a mod b` |
+| `SEM-CMP-1` | U-CMP | {`LT` `GT`} × {`TRUE`, `FALSE`} | compares unsigned and yields 1 or 0 |
+| `SEM-CMP-2` | U-CMP | `EQUAL`, `UNEQUAL` | `EQ` yields 1 iff the operands are equal |
+| `SEM-CMP-3` | U-CMP | `ZERO`, `NONZERO` | `ISZERO` yields 1 iff the operand is 0 |
+| `SEM-JMP-1` | U-JMP | `AT_TOP_LEVEL`, `INSIDE_PUSH_IMMEDIATE` | the jumpdest set is every offset holding `0x5B` not inside a `PUSH` immediate |
+| `SEM-JMP-2` | U-JMP | `VALID_TARGET`, `INVALID_TARGET` | `JUMP` transfers control to an offset in the jumpdest set, and halts exceptionally for one outside it |
+| `SEM-JMP-3` | U-JMP | `TAKEN`, `NOT_TAKEN` | `JUMPI` transfers control iff its condition operand is non-zero |
 | `SEM-RUN-1` | U-RUN | 1 | `PC` pushes the offset of the `PC` opcode itself |
 | `SEM-RUN-2` | U-RUN | 1 | `STOP` halts normally with empty returndata |
 | `SEM-RUN-3` | U-RUN | 1 | execution running past the end of code halts normally |
@@ -194,7 +213,7 @@ single uniform rule and names no alternatives.
 | ID | Unit | Cases | Postcondition |
 |---|---|---|---|
 | `SEM-MEM-1` | U-MEM | 1 | `MSTORE` writes 32 big-endian bytes at the given offset |
-| `SEM-MEM-2` | U-MEM | 1 | `MLOAD` reads 32 bytes at the offset; never-written bytes read as 0 |
+| `SEM-MEM-2` | U-MEM | `WRITTEN`, `UNWRITTEN` | `MLOAD` reads 32 bytes at the offset; never-written bytes read as 0 |
 | `SEM-MEM-3` | U-MEM | 1 | `MSIZE` is the highest touched offset rounded up to a multiple of 32 |
 | `SEM-STO-1` | U-STO | 1 | `SSTORE` writes to the storage of the frame's `storage_owner` |
 | `SEM-STO-2` | U-STO | 1 | `SLOAD` reads from the storage of the frame's `storage_owner` |
@@ -268,8 +287,8 @@ Every call kind × every boundary-carried identity field, so that no cell is lef
 |---|---|---|---|
 | `SEM-SEAM-C1` | U-RUN | 1 | `ADDRESS` pushes the executing frame's `address` |
 | `SEM-SEAM-C2` | U-RUN | 1 | `CALLER` pushes the executing frame's `caller` |
-| `SEM-RET-1` | U-RET | 1 | the caller pushes 1 for a `NORMAL` result and 0 for an `EXCEPTIONAL` one |
-| `SEM-RET-2` | U-RET | 1 | the caller copies `min(retSize, |returndata|)` bytes to memory at `retOffset` |
+| `SEM-RET-1` | U-RET | `NORMAL`, `EXCEPTIONAL` | the caller pushes 1 for a `NORMAL` result and 0 for an `EXCEPTIONAL` one |
+| `SEM-RET-2` | U-RET | `FULL`, `TRUNCATED` | the caller copies `min(retSize, |returndata|)` bytes to memory at `retOffset` |
 | `SEM-RET-3` | U-RET | 1 | `RETURNDATASIZE` is the length of the most recent result's returndata |
 | `SEM-RET-4` | U-RET | 1 | `RETURNDATACOPY` copies from that returndata into memory |
 
@@ -285,8 +304,8 @@ state.
 | ID | Unit | Cases | Postcondition |
 |---|---|---|---|
 | `SEM-ROOT-1` | U-ENTRY | 1 | `code` is the fixture's own code |
-| `SEM-ROOT-2` | U-ENTRY | 1 | `address` is `tx.to`, or the zero address when `tx.to` is absent |
-| `SEM-ROOT-3` | U-ENTRY | 1 | `caller` is `tx.from`, or the zero address when `tx.from` is absent |
+| `SEM-ROOT-2` | U-ENTRY | `PRESENT`, `ABSENT` | `address` is `tx.to`, or the zero address when `tx.to` is absent |
+| `SEM-ROOT-3` | U-ENTRY | `PRESENT`, `ABSENT` | `caller` is `tx.from`, or the zero address when `tx.from` is absent |
 | `SEM-ROOT-4` | U-ENTRY | 1 | `storage_owner` equals `address` |
 | `SEM-ROOT-5` | U-ENTRY | 1 | `static` is false |
 | `SEM-ROOT-6` | U-ENTRY | 1 | `pc` is 0 |
@@ -402,8 +421,13 @@ removes the *propagation* that gives the guard a true `static` to act on. The su
 postcondition is about the guard's behaviour given its input; the defect is in what that
 input is set to, one unit upstream, behind a substituted collaborator.
 
-**D4 is confirmed locally caught**, as Step 0 §6.1 predicted. Both candidate sites are
-surviving postconditions, and the frozen subset offers no third, so it scores `INVALID(5)`.
+**D4 is confirmed locally caught**, as Step 0 §6.1 predicted — and now *forced* rather than
+merely expected. Both candidate sites are surviving postconditions, and under §3.0 rule (ii)
+each carries the discriminating case: `LT-SEM-HLT-2` for the callee-side siting, and
+`LT-SEM-RET-1/EXCEPTIONAL` for the caller-side one. Before the semantic-partition rule,
+`LT-SEM-RET-1` could have been discharged with a `NORMAL` result and left D4 green, so the
+prediction did not follow from the plan. It does now. The frozen subset offers no third
+site, so D4 scores `INVALID(5)`.
 
 ---
 
@@ -436,75 +460,80 @@ survives after the obvious ways of manufacturing one by under-specification have
 
 Step 0 §3.1.3 rule 1, at case granularity: **one test per (surviving postcondition × case)**.
 IDs are `LT-<postcondition-id>` for a single-case postcondition and
-`LT-<postcondition-id>/<CASE>` otherwise. 58 postconditions yield **196** case IDs:
+`LT-<postcondition-id>/<CASE>` otherwise. 58 postconditions yield **213** case IDs:
 
 ```text
-LT-SEM-ARI-1/ADD            LT-SEM-ARI-1/DIV            LT-SEM-ARI-1/MOD
-LT-SEM-ARI-1/MUL            LT-SEM-ARI-1/SUB            LT-SEM-ARI-2/ADD
-LT-SEM-ARI-2/MUL            LT-SEM-ARI-2/SUB            LT-SEM-ARI-3
-LT-SEM-ARI-4                LT-SEM-CALL-1               LT-SEM-CALL-2
-LT-SEM-CALL-3               LT-SEM-CALL-4/CALL          LT-SEM-CALL-4/DELEGATECALL
-LT-SEM-CALL-4/STATICCALL    LT-SEM-CALL-5/CALL          LT-SEM-CALL-5/DELEGATECALL
-LT-SEM-CALL-5/STATICCALL    LT-SEM-CALL-6               LT-SEM-CALL-7/CALL
-LT-SEM-CALL-7/DELEGATECALL  LT-SEM-CALL-7/STATICCALL    LT-SEM-CALL-8/CALL
-LT-SEM-CALL-8/DELEGATECALL  LT-SEM-CALL-8/STATICCALL    LT-SEM-CMP-1/GT
-LT-SEM-CMP-1/LT             LT-SEM-CMP-2                LT-SEM-CMP-3
-LT-SEM-DEC-1                LT-SEM-DEC-2/PUSH1          LT-SEM-DEC-2/PUSH10
-LT-SEM-DEC-2/PUSH11         LT-SEM-DEC-2/PUSH12         LT-SEM-DEC-2/PUSH13
-LT-SEM-DEC-2/PUSH14         LT-SEM-DEC-2/PUSH15         LT-SEM-DEC-2/PUSH16
-LT-SEM-DEC-2/PUSH17         LT-SEM-DEC-2/PUSH18         LT-SEM-DEC-2/PUSH19
-LT-SEM-DEC-2/PUSH2          LT-SEM-DEC-2/PUSH20         LT-SEM-DEC-2/PUSH21
-LT-SEM-DEC-2/PUSH22         LT-SEM-DEC-2/PUSH23         LT-SEM-DEC-2/PUSH24
-LT-SEM-DEC-2/PUSH25         LT-SEM-DEC-2/PUSH26         LT-SEM-DEC-2/PUSH27
-LT-SEM-DEC-2/PUSH28         LT-SEM-DEC-2/PUSH29         LT-SEM-DEC-2/PUSH3
-LT-SEM-DEC-2/PUSH30         LT-SEM-DEC-2/PUSH31         LT-SEM-DEC-2/PUSH32
-LT-SEM-DEC-2/PUSH4          LT-SEM-DEC-2/PUSH5          LT-SEM-DEC-2/PUSH6
-LT-SEM-DEC-2/PUSH7          LT-SEM-DEC-2/PUSH8          LT-SEM-DEC-2/PUSH9
-LT-SEM-DEC-3/PUSH1          LT-SEM-DEC-3/PUSH10         LT-SEM-DEC-3/PUSH11
-LT-SEM-DEC-3/PUSH12         LT-SEM-DEC-3/PUSH13         LT-SEM-DEC-3/PUSH14
-LT-SEM-DEC-3/PUSH15         LT-SEM-DEC-3/PUSH16         LT-SEM-DEC-3/PUSH17
-LT-SEM-DEC-3/PUSH18         LT-SEM-DEC-3/PUSH19         LT-SEM-DEC-3/PUSH2
-LT-SEM-DEC-3/PUSH20         LT-SEM-DEC-3/PUSH21         LT-SEM-DEC-3/PUSH22
-LT-SEM-DEC-3/PUSH23         LT-SEM-DEC-3/PUSH24         LT-SEM-DEC-3/PUSH25
-LT-SEM-DEC-3/PUSH26         LT-SEM-DEC-3/PUSH27         LT-SEM-DEC-3/PUSH28
-LT-SEM-DEC-3/PUSH29         LT-SEM-DEC-3/PUSH3          LT-SEM-DEC-3/PUSH30
-LT-SEM-DEC-3/PUSH31         LT-SEM-DEC-3/PUSH32         LT-SEM-DEC-3/PUSH4
-LT-SEM-DEC-3/PUSH5          LT-SEM-DEC-3/PUSH6          LT-SEM-DEC-3/PUSH7
-LT-SEM-DEC-3/PUSH8          LT-SEM-DEC-3/PUSH9          LT-SEM-DEC-4
-LT-SEM-GRD-1                LT-SEM-GRD-2                LT-SEM-HLT-1
-LT-SEM-HLT-2                LT-SEM-HLT-3                LT-SEM-JMP-1
-LT-SEM-JMP-2                LT-SEM-JMP-3                LT-SEM-MEM-1
-LT-SEM-MEM-2                LT-SEM-MEM-3                LT-SEM-RET-1
-LT-SEM-RET-2                LT-SEM-RET-3                LT-SEM-RET-4
-LT-SEM-ROOT-1               LT-SEM-ROOT-2               LT-SEM-ROOT-3
-LT-SEM-ROOT-4               LT-SEM-ROOT-5               LT-SEM-ROOT-6
-LT-SEM-ROOT-7               LT-SEM-RUN-1                LT-SEM-RUN-2
-LT-SEM-RUN-3                LT-SEM-RUN-4                LT-SEM-SEAM-C1
-LT-SEM-SEAM-C2              LT-SEM-STK-1                LT-SEM-STK-2
-LT-SEM-STK-3                LT-SEM-STK-4/DUP1           LT-SEM-STK-4/DUP10
-LT-SEM-STK-4/DUP11          LT-SEM-STK-4/DUP12          LT-SEM-STK-4/DUP13
-LT-SEM-STK-4/DUP14          LT-SEM-STK-4/DUP15          LT-SEM-STK-4/DUP16
-LT-SEM-STK-4/DUP2           LT-SEM-STK-4/DUP3           LT-SEM-STK-4/DUP4
-LT-SEM-STK-4/DUP5           LT-SEM-STK-4/DUP6           LT-SEM-STK-4/DUP7
-LT-SEM-STK-4/DUP8           LT-SEM-STK-4/DUP9           LT-SEM-STK-5/SWAP1
-LT-SEM-STK-5/SWAP10         LT-SEM-STK-5/SWAP11         LT-SEM-STK-5/SWAP12
-LT-SEM-STK-5/SWAP13         LT-SEM-STK-5/SWAP14         LT-SEM-STK-5/SWAP15
-LT-SEM-STK-5/SWAP16         LT-SEM-STK-5/SWAP2          LT-SEM-STK-5/SWAP3
-LT-SEM-STK-5/SWAP4          LT-SEM-STK-5/SWAP5          LT-SEM-STK-5/SWAP6
-LT-SEM-STK-5/SWAP7          LT-SEM-STK-5/SWAP8          LT-SEM-STK-5/SWAP9
-LT-SEM-STK-6/DUP1           LT-SEM-STK-6/DUP10          LT-SEM-STK-6/DUP11
-LT-SEM-STK-6/DUP12          LT-SEM-STK-6/DUP13          LT-SEM-STK-6/DUP14
-LT-SEM-STK-6/DUP15          LT-SEM-STK-6/DUP16          LT-SEM-STK-6/DUP2
-LT-SEM-STK-6/DUP3           LT-SEM-STK-6/DUP4           LT-SEM-STK-6/DUP5
-LT-SEM-STK-6/DUP6           LT-SEM-STK-6/DUP7           LT-SEM-STK-6/DUP8
-LT-SEM-STK-6/DUP9           LT-SEM-STK-6/SWAP1          LT-SEM-STK-6/SWAP10
-LT-SEM-STK-6/SWAP11         LT-SEM-STK-6/SWAP12         LT-SEM-STK-6/SWAP13
-LT-SEM-STK-6/SWAP14         LT-SEM-STK-6/SWAP15         LT-SEM-STK-6/SWAP16
-LT-SEM-STK-6/SWAP2          LT-SEM-STK-6/SWAP3          LT-SEM-STK-6/SWAP4
-LT-SEM-STK-6/SWAP5          LT-SEM-STK-6/SWAP6          LT-SEM-STK-6/SWAP7
-LT-SEM-STK-6/SWAP8          LT-SEM-STK-6/SWAP9          LT-SEM-STK-7
-LT-SEM-STO-1                LT-SEM-STO-2                LT-SEM-STO-3
-LT-SEM-STO-4
+LT-SEM-ARI-1/ADD                    LT-SEM-ARI-1/DIV                    LT-SEM-ARI-1/MOD
+LT-SEM-ARI-1/MUL                    LT-SEM-ARI-1/SUB                    LT-SEM-ARI-2/ADD_NO_WRAP
+LT-SEM-ARI-2/ADD_WRAP               LT-SEM-ARI-2/MUL_NO_WRAP            LT-SEM-ARI-2/MUL_WRAP
+LT-SEM-ARI-2/SUB_NO_WRAP            LT-SEM-ARI-2/SUB_WRAP               LT-SEM-ARI-3/NONZERO_DIVISOR
+LT-SEM-ARI-3/ZERO_DIVISOR           LT-SEM-ARI-4/NONZERO_DIVISOR        LT-SEM-ARI-4/ZERO_DIVISOR
+LT-SEM-CALL-1                       LT-SEM-CALL-2                       LT-SEM-CALL-3
+LT-SEM-CALL-4/CALL                  LT-SEM-CALL-4/DELEGATECALL          LT-SEM-CALL-4/STATICCALL
+LT-SEM-CALL-5/CALL                  LT-SEM-CALL-5/DELEGATECALL          LT-SEM-CALL-5/STATICCALL
+LT-SEM-CALL-6                       LT-SEM-CALL-7/CALL                  LT-SEM-CALL-7/DELEGATECALL
+LT-SEM-CALL-7/STATICCALL            LT-SEM-CALL-8/CALL                  LT-SEM-CALL-8/DELEGATECALL
+LT-SEM-CALL-8/STATICCALL            LT-SEM-CMP-1/GT_FALSE               LT-SEM-CMP-1/GT_TRUE
+LT-SEM-CMP-1/LT_FALSE               LT-SEM-CMP-1/LT_TRUE                LT-SEM-CMP-2/EQUAL
+LT-SEM-CMP-2/UNEQUAL                LT-SEM-CMP-3/NONZERO                LT-SEM-CMP-3/ZERO
+LT-SEM-DEC-1                        LT-SEM-DEC-2/PUSH1                  LT-SEM-DEC-2/PUSH10
+LT-SEM-DEC-2/PUSH11                 LT-SEM-DEC-2/PUSH12                 LT-SEM-DEC-2/PUSH13
+LT-SEM-DEC-2/PUSH14                 LT-SEM-DEC-2/PUSH15                 LT-SEM-DEC-2/PUSH16
+LT-SEM-DEC-2/PUSH17                 LT-SEM-DEC-2/PUSH18                 LT-SEM-DEC-2/PUSH19
+LT-SEM-DEC-2/PUSH2                  LT-SEM-DEC-2/PUSH20                 LT-SEM-DEC-2/PUSH21
+LT-SEM-DEC-2/PUSH22                 LT-SEM-DEC-2/PUSH23                 LT-SEM-DEC-2/PUSH24
+LT-SEM-DEC-2/PUSH25                 LT-SEM-DEC-2/PUSH26                 LT-SEM-DEC-2/PUSH27
+LT-SEM-DEC-2/PUSH28                 LT-SEM-DEC-2/PUSH29                 LT-SEM-DEC-2/PUSH3
+LT-SEM-DEC-2/PUSH30                 LT-SEM-DEC-2/PUSH31                 LT-SEM-DEC-2/PUSH32
+LT-SEM-DEC-2/PUSH4                  LT-SEM-DEC-2/PUSH5                  LT-SEM-DEC-2/PUSH6
+LT-SEM-DEC-2/PUSH7                  LT-SEM-DEC-2/PUSH8                  LT-SEM-DEC-2/PUSH9
+LT-SEM-DEC-3/PUSH1                  LT-SEM-DEC-3/PUSH10                 LT-SEM-DEC-3/PUSH11
+LT-SEM-DEC-3/PUSH12                 LT-SEM-DEC-3/PUSH13                 LT-SEM-DEC-3/PUSH14
+LT-SEM-DEC-3/PUSH15                 LT-SEM-DEC-3/PUSH16                 LT-SEM-DEC-3/PUSH17
+LT-SEM-DEC-3/PUSH18                 LT-SEM-DEC-3/PUSH19                 LT-SEM-DEC-3/PUSH2
+LT-SEM-DEC-3/PUSH20                 LT-SEM-DEC-3/PUSH21                 LT-SEM-DEC-3/PUSH22
+LT-SEM-DEC-3/PUSH23                 LT-SEM-DEC-3/PUSH24                 LT-SEM-DEC-3/PUSH25
+LT-SEM-DEC-3/PUSH26                 LT-SEM-DEC-3/PUSH27                 LT-SEM-DEC-3/PUSH28
+LT-SEM-DEC-3/PUSH29                 LT-SEM-DEC-3/PUSH3                  LT-SEM-DEC-3/PUSH30
+LT-SEM-DEC-3/PUSH31                 LT-SEM-DEC-3/PUSH32                 LT-SEM-DEC-3/PUSH4
+LT-SEM-DEC-3/PUSH5                  LT-SEM-DEC-3/PUSH6                  LT-SEM-DEC-3/PUSH7
+LT-SEM-DEC-3/PUSH8                  LT-SEM-DEC-3/PUSH9                  LT-SEM-DEC-4
+LT-SEM-GRD-1                        LT-SEM-GRD-2                        LT-SEM-HLT-1
+LT-SEM-HLT-2                        LT-SEM-HLT-3                        LT-SEM-JMP-1/AT_TOP_LEVEL
+LT-SEM-JMP-1/INSIDE_PUSH_IMMEDIATE  LT-SEM-JMP-2/INVALID_TARGET         LT-SEM-JMP-2/VALID_TARGET
+LT-SEM-JMP-3/NOT_TAKEN              LT-SEM-JMP-3/TAKEN                  LT-SEM-MEM-1
+LT-SEM-MEM-2/UNWRITTEN              LT-SEM-MEM-2/WRITTEN                LT-SEM-MEM-3
+LT-SEM-RET-1/EXCEPTIONAL            LT-SEM-RET-1/NORMAL                 LT-SEM-RET-2/FULL
+LT-SEM-RET-2/TRUNCATED              LT-SEM-RET-3                        LT-SEM-RET-4
+LT-SEM-ROOT-1                       LT-SEM-ROOT-2/ABSENT                LT-SEM-ROOT-2/PRESENT
+LT-SEM-ROOT-3/ABSENT                LT-SEM-ROOT-3/PRESENT               LT-SEM-ROOT-4
+LT-SEM-ROOT-5                       LT-SEM-ROOT-6                       LT-SEM-ROOT-7
+LT-SEM-RUN-1                        LT-SEM-RUN-2                        LT-SEM-RUN-3
+LT-SEM-RUN-4                        LT-SEM-SEAM-C1                      LT-SEM-SEAM-C2
+LT-SEM-STK-1                        LT-SEM-STK-2                        LT-SEM-STK-3
+LT-SEM-STK-4/DUP1                   LT-SEM-STK-4/DUP10                  LT-SEM-STK-4/DUP11
+LT-SEM-STK-4/DUP12                  LT-SEM-STK-4/DUP13                  LT-SEM-STK-4/DUP14
+LT-SEM-STK-4/DUP15                  LT-SEM-STK-4/DUP16                  LT-SEM-STK-4/DUP2
+LT-SEM-STK-4/DUP3                   LT-SEM-STK-4/DUP4                   LT-SEM-STK-4/DUP5
+LT-SEM-STK-4/DUP6                   LT-SEM-STK-4/DUP7                   LT-SEM-STK-4/DUP8
+LT-SEM-STK-4/DUP9                   LT-SEM-STK-5/SWAP1                  LT-SEM-STK-5/SWAP10
+LT-SEM-STK-5/SWAP11                 LT-SEM-STK-5/SWAP12                 LT-SEM-STK-5/SWAP13
+LT-SEM-STK-5/SWAP14                 LT-SEM-STK-5/SWAP15                 LT-SEM-STK-5/SWAP16
+LT-SEM-STK-5/SWAP2                  LT-SEM-STK-5/SWAP3                  LT-SEM-STK-5/SWAP4
+LT-SEM-STK-5/SWAP5                  LT-SEM-STK-5/SWAP6                  LT-SEM-STK-5/SWAP7
+LT-SEM-STK-5/SWAP8                  LT-SEM-STK-5/SWAP9                  LT-SEM-STK-6/DUP1
+LT-SEM-STK-6/DUP10                  LT-SEM-STK-6/DUP11                  LT-SEM-STK-6/DUP12
+LT-SEM-STK-6/DUP13                  LT-SEM-STK-6/DUP14                  LT-SEM-STK-6/DUP15
+LT-SEM-STK-6/DUP16                  LT-SEM-STK-6/DUP2                   LT-SEM-STK-6/DUP3
+LT-SEM-STK-6/DUP4                   LT-SEM-STK-6/DUP5                   LT-SEM-STK-6/DUP6
+LT-SEM-STK-6/DUP7                   LT-SEM-STK-6/DUP8                   LT-SEM-STK-6/DUP9
+LT-SEM-STK-6/SWAP1                  LT-SEM-STK-6/SWAP10                 LT-SEM-STK-6/SWAP11
+LT-SEM-STK-6/SWAP12                 LT-SEM-STK-6/SWAP13                 LT-SEM-STK-6/SWAP14
+LT-SEM-STK-6/SWAP15                 LT-SEM-STK-6/SWAP16                 LT-SEM-STK-6/SWAP2
+LT-SEM-STK-6/SWAP3                  LT-SEM-STK-6/SWAP4                  LT-SEM-STK-6/SWAP5
+LT-SEM-STK-6/SWAP6                  LT-SEM-STK-6/SWAP7                  LT-SEM-STK-6/SWAP8
+LT-SEM-STK-6/SWAP9                  LT-SEM-STK-7                        LT-SEM-STO-1
+LT-SEM-STO-2                        LT-SEM-STO-3                        LT-SEM-STO-4
 ```
 
 ### 8.1 Deterministic input selection
@@ -544,15 +573,27 @@ FrameResult.halt        NORMAL, EXCEPTIONAL
 call kind               CALL, STATICCALL, DELEGATECALL
 address                 0x…0aaa, 0x…0c42, 0x…0dad, zero address   (§8.1 rule 3, then zero)
 account presence        absent, present-with-empty-code, present-with-non-empty-code
+storage slot            account absent; account present & slot never written;
+                        account present & slot written zero;
+                        account present & slot written non-zero
+tx.to                   absent, present
+tx.from                 absent, present
 uint256                 §8.1 rule 1
 byte string             §8.1 rule 4
 stack depth             §8.1 rule 5
 
-records (Frame, FrameResult, operand tuples)
+records (Frame, FrameResult, TxContext, World, operand tuples)
                         the Cartesian product of their field domains,
                         enumerated lexicographically by the field order in
                         which §2 declares them
 ```
+
+`TxContext` and `World` are in that list deliberately. `U-ENTRY` branches on whether `tx.to`
+and `tx.from` are present (`SEM-ROOT-2/3`), and a first implementation writing
+`account?.storage.get(slot) ?? 0n` branches on the storage-slot states above — so an
+enumeration that stopped at "account presence" would have left "the first frozen input"
+undefined for exactly those branches, and the word *total* would have been doing more work
+than the table under it.
 
 **And the stop rule, which matters more than the order.** If a branch is reachable but no
 value in the frozen domain reaches it:
@@ -560,21 +601,33 @@ value in the frozen domain reaches it:
 ```text
 record  UNREACHABLE_UNDER_FROZEN_DOMAIN  naming the branch,
 halt the qualification,
-and amend the preregistration BEFORE any measurement.
+STOP E1-v1, preserve the record,
+and continue only as a NEW E1-v2 preregistration.
 ```
 
-A hand-written fixture invented at the keyboard to close that gap is prohibited. Without this
-rule the enumeration is deterministic only until the first `if (frame.static)`, and a single
-improvised fixture would silently convert the frozen plan back into an authored one.
+An earlier wording said "amend the preregistration before any measurement", which was
+impossible on its face. This condition can only be discovered at step 6 of §10, and step 3
+has already demonstrated coverage and mutation on Baseline A — so a measured run has
+happened, and Step 0's freeze has bitten. E1 does not implement time travel. The strict
+reading is also the honest one: **the Baseline A measurement is the moment the freeze becomes
+final**, exactly as Step 0 §0 promises, and a domain gap discovered afterwards is a v1 result
+to be preserved, not a document to be quietly edited. Redefining "measured run" to mean the
+first injected-specimen measurement would weaken Step 0's freeze contract retroactively for
+no gain, and is rejected.
+
+A hand-written fixture invented at the keyboard to close such a gap is prohibited outright.
+Without this rule the enumeration is deterministic only until the first `if (frame.static)`,
+and a single improvised fixture would silently convert the frozen plan back into an authored
+one.
 
 Two digests, therefore:
 
 ```text
-plan_core_digest      over the 196 case IDs above, frozen NOW (§8.3)
+plan_core_digest      over the 213 case IDs above, frozen NOW (§8.3)
 
 test_domain_digest    over the realised list, recorded at step 6 of §10 —
                       after the clean Baseline B exists and before any
-                      defect is injected. Must be a superset of the 196,
+                      defect is injected. Must be a superset of the 213,
                       differing only by LT-BR-* entries generated by the
                       frozen procedure.
 ```
@@ -584,11 +637,11 @@ invalidates the run.
 
 ### 8.3 `plan_core_digest`
 
-SHA-256 over the 196 IDs, sorted ascending as ASCII, joined by `\n`, with a trailing newline.
+SHA-256 over the 213 IDs, sorted ascending as ASCII, joined by `\n`, with a trailing newline.
 The listing in §8 is the canonical input.
 
 ```text
-plan_core_digest = 1170fc83fe763c1ce78b61b900e493c66cc7cfc3dcaa8cc7ea77b5f88cb505fd
+plan_core_digest = 63b4d9f9e1b40a08d2bd3f862ce072fb036bc6401f4360823cc5bfc8d79aae02
 ```
 
 ---
@@ -602,7 +655,7 @@ suite permitted one assertion the projection withholds. It must therefore remain
 test that breaks the discipline in exactly one place — not a composition test.
 
 ```text
-c2_control_core  = the 196 core IDs of §8
+c2_control_core  = the 213 core IDs of §8
                  + exactly one preregistered assertion:
 
     LT-C2-SEM-SEAM-P7
@@ -614,19 +667,19 @@ c2_control_core  = the 196 core IDs of §8
 ### 9.1 The frozen relation, not two frozen lists
 
 Freezing the two *core* lists is not enough. At step 6 of §10 the calibration domain grows by
-the realised `LT-BR-*` set, and if C2's domain were left at "196 core + one assertion" the
+the realised `LT-BR-*` set, and if C2's domain were left at "213 core + one assertion" the
 two would diverge into:
 
 ```text
-D1   196 core + LT-BR-*
-C2   196 core + spy assertion
+D1   213 core + LT-BR-*
+C2   213 core + spy assertion
 ```
 
 — which is no longer *the same evidence plus one local oracle*, and the contrast C2 exists to
 draw would be gone. What is frozen is therefore the **relation**:
 
 ```text
-final_calibration_domain = 196 core + realised LT-BR-*
+final_calibration_domain = 213 core + realised LT-BR-*
 final_c2_domain          = final_calibration_domain + LT-C2-SEM-SEAM-P7
 ```
 
@@ -662,7 +715,7 @@ W6   both sides real, no doubles at all                           -> red
 D-specimen, and contributes to no §5.1 result.
 
 ```text
-c2_control_core_digest = 4a86085f74352b328b7bd9fc51264741320262195afcb44348442340ecc6f40d
+c2_control_core_digest = c4273493fd9c001687c9b745df3e1f900a64a3fe746c8d91142298dd3587a051
 ```
 
 ---
@@ -681,22 +734,28 @@ Superseding §9 steps 3–7 (Step 0 §9 steps 1–2 stand):
 3.  Baseline A          level-A units; green on the 49-case level-A oracle slice;
                         harness, coverage, mutation and manifest replay demonstrated.
 
-4.  core local tests    all 188 case IDs written from §8. Level-B ones fail at this
+4.  core local tests    all 213 case IDs written from §8. Level-B ones fail at this
                         point, which is expected and recorded — the units do not exist.
 
-5.  Baseline B, clean   the seam of §3.3-§3.5. NO defects. Oracle green on the 65
-                        level-B oracle cases (Step 0 §1.4 — the 71 in-subset cases
-                        less the 6 witnesses); all 188 core tests green.
+5.  Baseline B, clean   implement the complete surviving level-B semantics of §3 —
+                        memory, storage, the guard, halting, the entry frame, the
+                        CALL-family operand contract, frame construction, and the
+                        consuming side. The relational invariants of §3.7 are
+                        composition-only and are NOT implemented as a separate
+                        mechanism; they hold, or fail, as a consequence of the rest.
+                        NO defects.
 
-                        NOTE the numeric coincidence: 71 is both the level-B
-                        in-subset case count and the §3 postcondition count. They
-                        are unrelated.
+                        Green on the 65 level-B oracle cases (Step 0 §1.4 — the 71
+                        in-subset cases less the 6 witnesses); all 213 core tests
+                        green.
 
-6.  qualification       enumerate LT-BR-* from the clean source by §8.2; freeze the
-                        realised domain and record test_domain_digest and
-                        c2_control_test_set_digest; run the clean coverage and
-                        mutation qualification to the Step 0 §3.3 thresholds with
-                        NoCoverage == 0; confirm W1-W6 all green (§4.1 arm 1).
+6.  qualification       enumerate LT-BR-* from the clean source by §8.2/§8.2.1; freeze
+                        both final domains and run the §9.1 set-difference check;
+                        record test_domain_digest and c2_control_test_set_digest;
+                        run the clean coverage and mutation qualification to the
+                        Step 0 §3.3 thresholds with NoCoverage == 0; confirm W1-W6
+                        all green (§4.1 arm 1). An UNREACHABLE_UNDER_FROZEN_DOMAIN
+                        finding here stops E1-v1 (§8.2.1).
 
 7.  proxy               gated on the Step 0 §5.1.1 circularity check, then
                         e1-static-test-proxy/v0.
