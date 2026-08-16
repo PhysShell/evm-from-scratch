@@ -6,6 +6,22 @@ How much semantic information can be lost when VM execution outcomes are transpo
 
 This experiment treats the VM as a producer of semantically distinct outcomes and studies the transport layer separately from execution correctness.
 
+## Relationship to our projects
+
+E4 is the controlled fixture for the **Qodec gate outcome-fidelity** line and its corresponding architecture work around capture, replay, artifact identity, validation, and acceptance decisions.
+
+The production problem is not “does the VM execute correctly?” but “does an execution outcome retain the distinctions required by later evidence consumers after it crosses transport and replay boundaries?” E4 isolates that problem in a tiny system where the original semantic outcome is known exactly.
+
+Project-level use is:
+
+- **Qodec gate outcome fidelity:** controlled falsification fixture for semantic outcome → capture → stored artifact → replay → decision;
+- **gate.rs / events.rs architecture work:** exercise failure-class preservation, artifact-kind identity, same-byte structural validation, replay validation, deduplication, and version interpretation without changing production schemas to make an experiment convenient;
+- **OwnAudit evidence-binding work:** provide a small analogue for questions about whether recorded evidence still refers to and preserves the thing it claims to represent;
+- **P-038 / E1:** adjacent but distinct. E1 injects defects in execution/composition semantics; E4 injects defects after the semantic outcome already exists, in the evidence path;
+- **Own.NET:** no runtime dependency; any transfer is architectural evidence about representation and replay boundaries.
+
+E4 must not claim that every information loss is a correctness defect. The experiment explicitly distinguishes **representation fidelity** from **decision fidelity** because a coarse representation can be sufficient for one declared consumer and insufficient for another. That distinction maps directly to the gate work: evidence has to preserve the semantics required by its acceptance contract, not every bit merely because it exists.
+
 ## Motivation
 
 A VM can distinguish at least several termination/result classes even in a deliberately limited model:
