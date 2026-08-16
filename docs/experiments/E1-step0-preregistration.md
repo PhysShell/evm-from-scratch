@@ -992,5 +992,13 @@ The next steps, in order, each gated on the previous:
    implemented exactly as §5.1 specifies;
 7. **injection and measurement** — catalog §6, recorded per §7, both revisions measured.
 
+> **Steps 3–7 are superseded by [E1 Step 2 §10](./E1-step2-semantics-and-plan.md#10-revised-implementation-sequence).**
+> The ordering above was not executable: it placed the local-suite qualification before
+> Baseline B, while the frozen plan contains level-B postconditions — asking for coverage and
+> mutation thresholds over production code that does not yet exist. Step 2 §10 resequences so
+> that the clean Baseline B precedes qualification, and the realised test domain is frozen
+> after it but **before any defect exists**. Steps 1–2 above stand unchanged. This amendment
+> is made before any measured run, which §0 permits.
+
 A null result is acceptable and is preserved. Redesign after seeing results belongs to
 `E1-v2` and to a new preregistration document, never to an edit of this one.
