@@ -4,6 +4,26 @@ This fork is being used as a controlled research specimen, not as an attempt to 
 
 The goal is to exploit the repository's small, explicit execution model and existing `evm.json` corpus to run experiments that are hard to control in large production systems.
 
+## How this maps to our projects
+
+The fork is not a new standalone product. It is a shared laboratory for several existing research lines.
+
+| Experiment | Primary project connection | Secondary connection | What it contributes |
+|---|---|---|---|
+| **E1** | **OwnAudit / P-038** | Blind Spot Miner / leakmine, Own.NET | Controlled boundary-defect corpus with known causal seam, trigger, and ground truth; calibration for real-world boundary-blindness evidence |
+| **E2** | **Plonky3 / verifiable computation** | Noir, Cairo, payment/calculation verification | Small end-to-end `program -> trace -> constraints -> proof -> verifier` specimen |
+| **E3** | **OwnAudit assurance research × Plonky3** | P-038, Blind Spot Miner, verifiable calculations | Detection matrix comparing local tests, composition witnesses, mutation analysis, trace constraints, and proofs |
+| **E4** | **Qodec gate outcome fidelity** | OwnAudit evidence binding, gate.rs/events.rs work | Controlled fixture for semantic outcome -> capture -> stored artifact -> replay -> acceptance decision |
+
+The relationships are deliberately asymmetric:
+
+- E1 does not replace P-038. E1 supplies causal calibration; P-038 supplies externally grounded evidence from real software seams.
+- E2 does not imply that payment/business rules are correct merely because a proof verifies. It establishes the proving mechanism before business semantics are introduced.
+- E3 is downstream of frozen E1/E2 artifacts and exists specifically to expose disagreements and shared blind spots between assurance mechanisms.
+- E4 is not an EVM correctness experiment. Its defect surface begins after a semantic execution outcome already exists, in the evidence/transport/replay path.
+
+Nothing in this fork should become an Own.NET or Qodec production dependency merely because an experiment proved useful. Transfer conclusions and patterns, not accidental laboratory architecture.
+
 ## Principles
 
 1. **Independent tracks by default.** Each experiment should be implementable on its own branch with its own hypotheses, fixtures, measurements, and result document.
