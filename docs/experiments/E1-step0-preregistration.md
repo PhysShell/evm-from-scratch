@@ -294,7 +294,8 @@ producer, and the local suite is green — not by omission, but because the decl
 affords no observation of that value.
 
 The rule is a property of the postcondition's *form* and the boundary's *topology*,
-decidable from §3.1.1 alone. It does not consult the defect catalog. An assertion is
+decidable from §3.1.1 plus the frozen boundary of §3.1.2(a) — its two inputs, and only
+those. It does not consult the defect catalog. An assertion is
 therefore absent from the local suite because the boundary hides it, never because an author
 declined to write it.
 
