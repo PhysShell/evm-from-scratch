@@ -90,9 +90,20 @@ ADDRESS, CALLER
 GAS                           (placeholder only — see below)
 ```
 
-`GAS` is included **as a stack producer with no accounting behind it**: it pushes a frozen
-constant. It is here only because the upstream `DELEGATECALL` fixture passes a gas argument,
-and dropping that fixture would cost the `address` / `storage_owner` seam its witness. Gas
+`GAS` is included **as a stack producer with no accounting behind it**:
+
+```text
+GAS := 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff   (MAX_UINT256)
+```
+
+The value is not our choice. Upstream case **#84 `GAS`** asserts exactly this and states its
+reason — *"in this version of the tests, GAS is not supported yet and is always expected to
+return MAX_UINT256"* — so the constant is dictated by the oracle we are already bound to, and
+#84 pins it as a regression. Recording it here rather than "a frozen constant, chosen at
+implementation" removes the opportunity to tune the number after a first attempt at #146.
+
+`GAS` is here only because the upstream `DELEGATECALL` fixture passes a gas argument, and
+dropping that fixture would cost the `address` / `storage_owner` seam its witness. Gas
 *semantics* remain excluded (§1.3); a defect involving gas is out of scope.
 
 **The seam** is the caller frame → callee frame transition, modelled as an explicit frame
@@ -187,24 +198,47 @@ substituted. This is the analogue of §5.1's *mock-heavy* requirement, and it is
 not incidental — a specimen whose local tests exercise the real far side is not a §5.1
 specimen at all.
 
-### 3.1 Local test authoring rule (anti-tuning)
+### 3.1 Local test construction (mechanical independence)
 
-Local tests are **derived mechanically from the frozen semantics document**, never from the
-defect catalog:
+An instruction not to read §6 would be worthless. The catalog is frozen in this same
+document, it names the four corrupted fields in plain text, and no procedure can verify that
+a person has forgotten something. Git history proves the order in which files were written;
+it proves nothing about what their author knew. So the independence here is **structural**:
+the local test set is a *function of the frozen semantics*, leaving the author no free
+choice that the catalog could bias.
 
-1. one test per documented postcondition of each production function;
-2. additional tests only as needed to reach the §3.3 branch-coverage threshold;
-3. at the seam, the far side **must** be a test double — a caller-side test constructs a
-   stub callee frame, a callee-side test is handed a stub frame it does not build.
+**The normative semantics document is the sole input.** Before implementation it must
+enumerate, for every production function, its complete postcondition list — and, for the
+seam specifically, **a postcondition for each of the six boundary-carried fields (§1.2) on
+both the producing and the consuming side.** That completeness requirement is frozen here,
+because it is the one place tuning could otherwise re-enter: a semantics document that
+quietly omits a postcondition about the `static` guard would yield a local suite that cannot
+assert it, and the resulting blindness would be authored rather than discovered.
 
-**The defect catalog in §6 may not be consulted while authoring local tests.** The
-authoring commits must precede the first injection commit in git history, and that ordering
-is a checkable post-hoc audit of this rule. If it is violated, the affected specimens leave
-the calibration slice.
+**The local test plan is then enumerated exhaustively and frozen before any test is
+written**, by this fixed mapping:
 
-The reason is blunt: if the person writing the local tests knows which boundary field a
-defect will corrupt, "the local tests happened not to assert that field" stops being a
-finding and becomes an authoring decision.
+1. **postcondition tests** — for each production function `F` and each documented
+   postcondition `P` of `F`, exactly one test asserting `P`. Inputs are chosen by the frozen
+   deterministic input-selection rule recorded in the plan, never by author preference.
+2. **branch completion** — for each branch in `F` left uncovered by step 1, exactly one test,
+   its input obtained by the frozen search order over the input enumeration. Not "whatever
+   the author found convenient".
+3. **seam doubles** — at the seam the far side is always a test double, constructed by the
+   frozen rule: a caller-side test builds a stub callee frame, a callee-side test receives a
+   stub frame it did not build.
+
+The assertion set is therefore determined by the semantics plus the plan, both frozen before
+implementation. Knowledge of §6 buys nothing: the author may have D1–D4 printed on a
+t-shirt and still have no room to shape which assertions exist.
+
+Git ordering — local-suite commits preceding the first injection commit — is retained as a
+**secondary audit** that the plan was followed in sequence. It is corroboration, not the
+guarantee.
+
+If the frozen local-test plan turns out to be unimplementable as specified, that is a Step 0
+defect: it is fixed by a new preregistration before measurement, never by an author decision
+at the keyboard.
 
 ### 3.2 Seam-adjacent region
 
@@ -214,9 +248,7 @@ containing (a) caller-side construction of the boundary-carried fields and (b) c
 consumption of and guarding on them. Repository-wide coverage and repository-wide mutation
 score are recorded for context and are **not** admissible as the §3.3 thresholds.
 
-### 3.3 Thresholds
-
-Frozen, and required of the **clean baseline** before any injection:
+### 3.3 Thresholds, and the revision they are measured on
 
 | Measurement | Threshold over `seam_adjacent_region` |
 |---|---|
@@ -224,11 +256,51 @@ Frozen, and required of the **clean baseline** before any injection:
 | Branch coverage | ≥ 90% |
 | Mutation score | ≥ 90%, computed as killed / (killed + survived) |
 
-Mutants reported `NoCoverage`, `Timeout`, `Ignored` or `CompileError` are **excluded from
-the denominator and reported separately as raw counts**. Folding a no-coverage mutant into
-either side of the ratio is prohibited: the whole point of the experiment is that local
-adequacy was genuinely high, and a denominator that hides uncovered code manufactures
-exactly the adequacy being claimed.
+These thresholds are evaluated **twice, on two different revisions, for two different
+purposes**:
+
+- **on the clean baseline — harness qualification.** Establishes that the stand is capable
+  of strong local evidence at all. Necessary, and not by itself the §5.1 evidence.
+- **on the injected specimen — the §5.1 evidence.** P-038 §5.1 asks for a specimen in which
+  *the bug exists* while the suite is green, coverage is high and mutation adequacy is high.
+  That is a property of the defective program, so it must be measured there.
+
+A clean revision that was mutation-adequate says nothing about a defective one. Injection
+can add a line, add a branch, or introduce an unkillable mutant, and once it has, "this
+specimen is mutation-adequate" is no longer supported by the baseline number. The distinction
+matters most for **D1**: the entire interest of an absence defect is that the *defective*
+program still carries strong mutation evidence despite having no causal construct present.
+Quoting the baseline figure there would assert precisely the thing worth measuring.
+
+Both sets of figures are recorded (§7). Only the injected-specimen figures may be cited as
+P-038 §5.1 evidence.
+
+#### 3.3.1 Unassessed mutants
+
+A mutation score is only as honest as its denominator. With `killed 9 / survived 1 /
+NoCoverage 100`, the ratio reads 90% while a hundred mutants sit unexamined.
+
+Within `seam_adjacent_region`, on the revision being qualified:
+
+```text
+NoCoverage           must be 0
+                     otherwise the specimen may not claim local mutation
+                     adequacy — §5.3 condition 3 on the baseline, or
+                     condition 6 on the injected revision, fails
+
+Timeout | Ignored | CompileError
+                     unassessed — the operator's fate is unknown
+
+  inside the causal region     -> CALIBRATION INCONCLUSIVE
+                                  the exact locus of the claim is unassessed
+  elsewhere in seam_adjacent   -> SPECIMEN INVALID
+                                  (adequacy not established, cond. 3 or 6)
+  outside seam_adjacent        -> recorded as context, no effect on the verdict
+```
+
+Requiring `NoCoverage == 0` over the seam-adjacent region rather than merely reporting it
+is the deliberate strengthening: a region with uncovered mutants has not demonstrated the
+local adequacy this experiment exists to hold constant.
 
 ---
 
@@ -248,13 +320,44 @@ The witnesses are drawn from the upstream corpus, which already contains them:
 | W5 | #147 `STATICCALL` | `returndata`, `success` | a static call that writes nothing still returns data |
 | W6 | #148 `STATICCALL (reverts on write)` | `static` | `SSTORE` inside a static callee fails |
 
-Using upstream fixtures as witnesses is deliberate: they were written to teach EVM
-semantics, not to catch our injected defects, so they cannot be accused of being shaped
-around the mechanism we hope to demonstrate.
+Using upstream fixtures is deliberate, and the claim it supports should be stated at its
+real strength and no higher: **the fixtures** were authored upstream to teach EVM semantics,
+with no knowledge of this experiment, so their content cannot have been shaped around the
+mechanism we hope to demonstrate. **The selection** of these particular six was made by us,
+knowing the intended seam. That selection is legitimate because it is frozen here, before
+any injection exists — but it is frozen choice, not independence, and must not be described
+as the latter.
 
 A witness "fails" for a specimen iff its asserted stack/success outcome differs from the
 upstream expectation. Witness cases are excluded from the §1.4 oracle green-suite
 requirement (see §1.4) and from the §3 local suite.
+
+### 4.1 The counterfactual: a witness must pass before it may fail
+
+Each defect in §6 has an **assigned witness**. For a specimen's witness failure to mean
+anything, that same witness must be **green on the exact clean baseline revision** the
+specimen was injected into.
+
+Without it the design admits a specimen whose assigned witness was already broken —
+unimplemented, or failing for an unrelated reason — so that:
+
+```text
+clean baseline:   oracle 65/65 green,  W6 already failing
+inject D1:                             W6 fails
+=>  "defect detected"                  though injection may have changed nothing
+```
+
+The witness would be reporting the state of the baseline, not the effect of the injection.
+Both arms of the counterfactual are therefore required, on the same revision pair:
+
+```text
+assigned witness PASSES on the clean baseline revision
+assigned witness FAILS  on the injected revision
+```
+
+This is why the witnesses are excluded from the §1.4 oracle set but not from testing: they
+are not part of the "baseline is correct" measurement, and they must still be green before
+any injection is attributed to them.
 
 ---
 
@@ -291,66 +394,146 @@ The scanner's modelled-construct set is frozen with this version id. **Any chang
 predicate, the modelled-construct set, or the depth bound produces `v1` and does not edit
 `v0`.** Results already recorded under `v0` remain in the record under `v0`.
 
+#### 5.1.1 Open question — is the proxy circular? (gate before step 5)
+
+The proxy asks whether an assertion exists that is derived from a carried field. The §3.1
+plan determines which assertions exist. Those two facts sit uncomfortably close together,
+and the risk is a proxy that does no work:
+
+```text
+frozen local-test plan   ->   which assertions exist
+                                      |
+                          proxy  ->   "does an assertion derived
+                                       from field f exist?"
+```
+
+If `likely_unwitnessed` turns out to mean nothing more than *"the plan did not require an
+assertion here"*, then §5.1 is circular: the detector would be rediscovering our own
+authoring rule and calling it a structural property of the seam.
+
+This is not yet known to be a defect, and it does not block the freeze — no measured run
+depends on it. **It does block step 5.** Before the proxy is implemented, it must be shown
+that `likely_unwitnessed` can arise from *real structural separation* between the local
+tests and the production transition — that a seam field can go unasserted because the local
+tests genuinely cannot observe it through the doubles, not merely because the plan did not
+enumerate an assertion for it. The finding is recorded either way, and if the answer is that
+the proxy only re-reads the plan, `v0` is replaced before any calibration result is claimed
+under it.
+
 ### 5.2 Admission to the slice
 
 A specimen enters the calibration slice iff, in this order:
 
-1. it is drawn from Baseline B (§1.2) — level A specimens are ineligible by construction;
-2. its defect's causal region is the production, propagation, or guarding of a
+1. it is a **D-specimen**, not a control — C1a, C1b and C2 are excluded by construction
+   (§6), including C2, whose causal region *is* a boundary field and which would otherwise
+   qualify under condition 3 below;
+2. it is drawn from Baseline B (§1.2) — level A specimens are ineligible by construction;
+3. its defect's causal region is the production, propagation, or guarding of a
    boundary-carried field (§1.2);
-3. its local suite satisfies the §3.1 authoring rule, git-history-checkable;
-4. its local tests substitute the far side at the seam (§3.1.3).
+4. its local suite was produced by the frozen local-test plan of §3.1, with the git-ordering
+   audit as corroboration;
+5. its local tests substitute the far side at the seam (§3.1 rule 3).
 
 ### 5.3 Calibration decision rule
 
-For an admitted specimen, **CALIBRATION PASS** iff all six hold:
+For an admitted specimen, **CALIBRATION PASS** iff all seven hold:
 
 ```text
-1. clean baseline green on the oracle set                       (§1.4)
-2. composition witness fails on the injected specimen           (§4)
-3. full local suite green on the injected specimen              (§3)
-4. seam-adjacent line ≥95% and branch ≥90% on the baseline      (§3.3)
-5. seam-adjacent mutation score ≥90% on the baseline            (§3.3)
-6. proxy returns likely_unwitnessed for the corrupted field     (§5.1)
+harness qualification, on the clean baseline revision
+  1. baseline green on the oracle set                           (§1.4)
+  2. assigned witness PASSES on the baseline                    (§4.1)
+  3. seam-adjacent line ≥95%, branch ≥90%, mutation ≥90%,
+     NoCoverage == 0                                            (§3.3, §3.3.1)
+
+the specimen itself, on the injected revision
+  4. assigned witness FAILS                                     (§4.1)
+  5. full local suite green                                     (§3)
+  6. seam-adjacent line ≥95%, branch ≥90%, mutation ≥90%,
+     NoCoverage == 0                                            (§3.3, §3.3.1)
+
+the detector obligation
+  7. proxy returns likely_unwitnessed for the corrupted field   (§5.1)
 ```
 
-Conditions 1–5 construct the §5.1 specimen; condition 6 is the detector obligation E1's
-general question does not carry.
+Conditions 1–3 qualify the stand. Conditions 4–6 are the §5.1 specimen proper — a program
+in which *the bug exists* while the suite is green and local adequacy is high — and only
+these figures may be cited as §5.1 evidence. Conditions 2 and 4 together are the
+counterfactual that makes the witness failure attributable to the injection. Condition 7 is
+the detector obligation E1's general question does not carry.
 
-**If 1–5 hold and 6 fails**, the outcome is `CALIBRATION FAIL — proxy`. Per P-038 §5.1 this
-kills the implementation or the proxy definition, **not the research hypothesis**: it is
-recorded, the proxy may be revised under a new version id, and the specimen stays in the
-record. It is not evidence against boundary blindness.
+**If 1–6 hold and 7 returns `likely_witnessed`**, the outcome is `CALIBRATION FAIL — proxy`.
+Per P-038 §5.1 this kills the implementation or the proxy definition, **not the research
+hypothesis**: it is recorded, the proxy may be revised under a new version id, and the
+specimen stays in the record. It is not evidence against boundary blindness.
 
-**If any of 1–5 fails**, the outcome is `SPECIMEN INVALID` with the failing condition named.
-An invalid specimen is not a result about detection in either direction.
-
-**If 6 returns `indeterminate`**, the outcome is `CALIBRATION INCONCLUSIVE — proxy abstained`.
+**If 7 returns `indeterminate`**, the outcome is `CALIBRATION INCONCLUSIVE — proxy abstained`.
 It is never silently read as either pass or fail, and the abstention rate across specimens
 is reported alongside every calibration result.
+
+**If any of 1–6 fails**, the outcome is `SPECIMEN INVALID` with the failing condition named.
+An invalid specimen is not a result about detection in either direction. Two sub-cases are
+called out because they are easy to misread:
+
+- **condition 2 fails** (assigned witness already red on the baseline) — the stand is broken
+  for that seam. Nothing about the injection may be concluded, and in particular a
+  subsequent condition-4 failure is meaningless.
+- **condition 6 fails on unassessed mutants inside the causal region** — per §3.3.1 the
+  outcome is `CALIBRATION INCONCLUSIVE`, not `SPECIMEN INVALID`: the specimen may be sound
+  and merely unmeasured.
 
 ---
 
 ## 6. Defect and control catalog
 
-Frozen. At least one specimen from **each** of D1, D2, D4, C1 and C2 must be built and
-measured before any E1 result is written up. The catalog deliberately does not consist only
-of absence defects.
+Frozen. All of **D1, D2, D3, D4, C1a, C1b and C2** must be built and measured before any E1
+result is written up. The catalog deliberately does not consist only of absence defects.
 
 | ID | Class | Seam field | Injection | Expected local | Expected witness |
 |---|---|---|---|---|---|
 | **D1** | boundary **absence** | `static` | the callee-side write guard is not implemented at all | passes | W6 fails |
 | **D2** | boundary **misbinding** | `address` | `DELEGATECALL` sets the callee's `address` to the callee instead of the caller | passes | W4 fails |
-| **D3** | boundary **misbinding** | `caller` | `CALL` propagates the transaction origin as `caller` instead of the immediate caller | passes | W3 fails |
+| **D3** | boundary **misbinding** | `caller` | `CALL` sets the callee's `caller` to the **callee's own address** instead of the immediate caller's | passes | W3 fails |
 | **D4** | exceptional **propagation** | `success` | callee `REVERT` is flattened into a normal return | passes | W2 fails |
-| **C1** | **negative control** — ordinary local fault | none | off-by-one in `SUB`, or `LT` implemented as `≤` | **fails** | fails |
-| **C2** | **positive control** — boundary fault with a local oracle | `static` | as D1, but the local suite contains an explicit assertion on the guard | **fails** | W6 fails |
+| **C1a** | **negative control** — ordinary local fault | none | `SUB` computes `a - b - 1` | **fails** | n/a — passes |
+| **C1b** | **negative control** — ordinary local fault | none | `LT` implemented as `≤` | **fails** | n/a — passes |
+| **C2** | **positive control** — boundary fault with a local oracle | `static` | as D1, but the local test plan includes an explicit assertion on the guard | **fails** | W6 fails |
 
-**C1** exists to show the local apparatus catches what it should — an experiment in which
-local evidence never catches anything is measuring a broken harness. **C2** exists to show
-the seam is not intrinsically invisible: when the local oracle is present, the boundary
-defect is caught locally. C2's local suite is a documented, deliberate exception to §3.1
-and is marked as such in its manifest.
+The D-rows each name an **assigned witness**, and §4.1's two-armed counterfactual applies to
+them. The C-rows do not, and this is not an oversight:
+
+**C1a/C1b have no assigned witness and their composition witnesses pass.** None of W1–W6
+executes `SUB` or `LT` — the seam fixtures are `PUSH`/`CALL`/`MLOAD`/`SSTORE` shaped — so an
+arithmetic fault is invisible to every one of them. What it *does* break is the §1.4 oracle
+set, which is full of arithmetic cases, and the local suite, which is the point: C1 shows the
+local apparatus catches an ordinary fault that never reaches the seam. Its expected signature
+is the exact mirror of a boundary defect — **oracle red, local red, witnesses green** — and
+recording it as "witness fails" would have been simply false.
+
+**D3 introduces no new semantic dimension.** An earlier draft had it propagate the
+transaction origin, but `origin` is neither in the frozen opcode subset (§1.2) nor among the
+boundary-carried fields (§1.3 excludes tx-context opcodes beyond `ADDRESS`/`CALLER`), so
+that injection would have required widening the model to host its own defect. Misbinding
+`caller` to the callee's own address stays entirely inside the frozen field set, and W3
+(#141) discriminates it exactly: the fixture expects the caller's `0x…aaa` and would observe
+the callee's `0x…c42`.
+
+**C1a and C1b are both mandatory**, and both are named concretely. An `or` in a
+preregistration is a deferred choice wearing a commitment's clothes — it lets whichever
+control behaves more agreeably be selected after the fact.
+
+**C1a/C1b** exist to show the local apparatus catches what it should — an experiment in
+which local evidence never catches anything is measuring a broken harness. **C2** exists to
+show the seam is not intrinsically invisible: when the local oracle is present, the boundary
+defect is caught locally. C2's assertion is added to the frozen local-test plan (§3.1) as a
+documented, deliberate exception, recorded in its manifest and in the plan itself — not
+improvised at the keyboard.
+
+**The §5.3 decision rule governs D-specimens only.** All three controls would trip it —
+C1a/C1b on condition 4 (no witness failure), C2 on condition 5 (local suite red) — and would
+be recorded as `SPECIMEN INVALID`, which would be a true statement about the wrong question.
+The controls are not candidate §5.1 specimens; they are checks on the apparatus. Each is
+scored against its own expected signature above, and `calibration_outcome` is `n/a` for all
+three.
 
 A corpus of hand-picked blind spots would be, in the E1 document's own words, uselessly
 self-congratulatory. D1 in particular must not be treated as the canonical or first
@@ -390,15 +573,27 @@ document's prohibition on collapsing these into a vanity score is binding here.
 
 ```text
 detected_by_local_suite            bool
+assigned_witness                   W1..W6
+witness_green_on_baseline          bool   (§4.1 counterfactual, arm 1)
+witness_fails_on_injected          bool   (§4.1 counterfactual, arm 2)
 detected_by_composition_witness    bool   (per witness id)
 mutation_representable             representable | not_representable | indeterminate
-seam_adjacent_line_coverage        float
-seam_adjacent_branch_coverage      float
-seam_adjacent_mutation_score       float
-mutation_excluded_counts           {no_coverage, timeout, ignored, compile_error}
+
+  measured on BOTH revisions, recorded separately and never interchanged:
+  baseline_*  = harness qualification      injected_*  = the §5.1 evidence
+
+baseline_seam_line_coverage        float
+baseline_seam_branch_coverage      float
+baseline_seam_mutation_score       float
+baseline_seam_unassessed           {no_coverage, timeout, ignored, compile_error}
+injected_seam_line_coverage        float
+injected_seam_branch_coverage      float
+injected_seam_mutation_score       float
+injected_seam_unassessed           {no_coverage, timeout, ignored, compile_error}
+unassessed_in_causal_region        bool   (§3.3.1 -> INCONCLUSIVE)
 repo_wide_coverage                 float  (context only, never a threshold)
 repo_wide_mutation_score           float  (context only, never a threshold)
-defect_class                       D1..D4 | C1 | C2
+defect_class                       D1..D4 | C1a | C1b | C2
 semantic_seam                      seam id
 boundary_field                     one of §1.2
 local_assertions_touching_field    int
@@ -414,15 +609,16 @@ calibration_outcome                PASS | FAIL_PROXY | INVALID | INCONCLUSIVE | 
 ## 8. Freeze manifest
 
 Before the first measured run, one machine-readable manifest records: the resolved oracle
-case-index list (§1.4), the pinned tool versions (§2), the `seam_adjacent_region` per seam
-(§3.2), the StrykerJS operator catalog as used (§6.1), the enumeration budget (§6.1), the
-proxy version id (§5.1), and the baseline revision sha.
+case-index list (§1.4), the pinned tool versions (§2), the **frozen local-test plan** (§3.1),
+the `seam_adjacent_region` and the `causal_region` per seam (§3.2, §3.3.1), the StrykerJS
+operator catalog as used (§6.1), the enumeration budget (§6.1), the proxy version id (§5.1),
+and the baseline revision sha.
 
 Per injected defect, the manifest carries the fields already specified by the E1 document —
 `id`, `class`, `semantic_seam`, `baseline_revision`, `fault_patch`, `expected_trigger`,
-`expected_semantic_difference` — plus `boundary_field` and the §6.1 representability
-classification. It carries **no** post-hoc claim about which technique did or did not detect
-the defect.
+`expected_semantic_difference` — plus `boundary_field`, the `assigned_witness` (§4.1), and
+the §6.1 representability classification. It carries **no** post-hoc claim about which
+technique did or did not detect the defect.
 
 ---
 
@@ -433,13 +629,18 @@ Only this document. No interpreter, no harness, no injection, no measurement.
 The next steps, in order, each gated on the previous:
 
 1. **freeze** — this document reviewed and merged;
-2. **Baseline A** — interpreter for §1.1, green on its oracle slice, harness + coverage +
+2. **normative semantics + local-test plan** — the semantics document with its
+   completeness requirement (§3.1), and the exhaustively enumerated test plan derived from
+   it, both frozen **before** any test or interpreter code is written;
+3. **Baseline A** — interpreter for §1.1, green on its oracle slice, harness + coverage +
    mutation + manifest replay all demonstrated working;
-3. **local suite** — authored under §3.1, to the §3.3 thresholds, committed **before** any
-   defect exists;
-4. **Baseline B** — the seam of §1.2, green on the full oracle set;
-5. **proxy** — `e1-static-test-proxy/v0` implemented exactly as §5.1 specifies;
-6. **injection and measurement** — catalog §6, recorded per §7.
+4. **local suite** — instantiated from the frozen plan, meeting the §3.3 thresholds with
+   `NoCoverage == 0` (§3.3.1), committed **before** any defect exists;
+5. **Baseline B** — the seam of §1.2, green on the full oracle set, **and every assigned
+   witness W1–W6 green** (§4.1 arm 1);
+6. **proxy** — gated on the §5.1.1 circularity check, then `e1-static-test-proxy/v0`
+   implemented exactly as §5.1 specifies;
+7. **injection and measurement** — catalog §6, recorded per §7, both revisions measured.
 
 A null result is acceptable and is preserved. Redesign after seeing results belongs to
 `E1-v2` and to a new preregistration document, never to an edit of this one.
