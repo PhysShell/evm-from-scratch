@@ -248,9 +248,38 @@ containing (a) caller-side construction of the boundary-carried fields and (b) c
 consumption of and guarding on them. Repository-wide coverage and repository-wide mutation
 score are recorded for context and are **not** admissible as the §3.3 thresholds.
 
+### 3.2.1 Test domain — which tests may produce the evidence
+
+`seam_adjacent_region` says which *production code* is measured. It says nothing about
+which *tests* do the measuring, and that second question decides whether the whole
+experiment means anything.
+
+**Every §3.3 coverage and mutation measurement, on both revisions, runs against the frozen
+local suite alone.** The oracle set (§1.4) and the composition witnesses W1–W6 (§4) are
+**excluded from the test domain of these measurements.**
+
+Without that exclusion the default is fatal: a Jest run over everything would let W1–W6
+cover the seam and kill the seam mutants, and the resulting figure would be reported as
+strong *local* adequacy. It would be nothing of the kind — the composition witness would
+have manufactured the very evidence the experiment holds constant, and P-038's entire
+distinction between local point evidence and a composition witness would collapse inside
+our own measurement.
+
+Each suite has exactly one job, and no second one:
+
+| Suite | Answers | Never used for |
+|---|---|---|
+| oracle set (§1.4) | is the baseline correct? | coverage, mutation, local detection |
+| frozen local suite (§3.1) | local coverage, mutation, local detection | correctness, composition |
+| witnesses W1–W6 (§4) | the composition counterfactual | coverage, mutation, local detection |
+
+The freeze manifest records the frozen local suite's exact test-ID list and a
+`local_test_set_digest` over it, so the domain of any recorded measurement can be verified
+after the fact rather than trusted.
+
 ### 3.3 Thresholds, and the revision they are measured on
 
-| Measurement | Threshold over `seam_adjacent_region` |
+| Measurement | Threshold over `seam_adjacent_region`, frozen local suite only (§3.2.1) |
 |---|---|
 | Line coverage | ≥ 95% |
 | Branch coverage | ≥ 90% |
@@ -280,7 +309,8 @@ P-038 §5.1 evidence.
 A mutation score is only as honest as its denominator. With `killed 9 / survived 1 /
 NoCoverage 100`, the ratio reads 90% while a hundred mutants sit unexamined.
 
-Within `seam_adjacent_region`, on the revision being qualified:
+Within `seam_adjacent_region`, mutants produced by the frozen local suite alone (§3.2.1),
+on whichever revision is being qualified — baseline or injected, symmetrically:
 
 ```text
 NoCoverage           must be 0
@@ -291,12 +321,16 @@ NoCoverage           must be 0
 Timeout | Ignored | CompileError
                      unassessed — the operator's fate is unknown
 
-  inside the causal region     -> CALIBRATION INCONCLUSIVE
-                                  the exact locus of the claim is unassessed
-  elsewhere in seam_adjacent   -> SPECIMEN INVALID
-                                  (adequacy not established, cond. 3 or 6)
+  inside the causal region     -> the condition fails as "unassessed"
+  elsewhere in seam_adjacent   -> the condition fails as "inadequate"
   outside seam_adjacent        -> recorded as context, no effect on the verdict
 ```
+
+This section **classifies**; it does not adjudicate. The verdict that follows from a
+classification is decided solely by the ordered algorithm in §5.3.1 — where an unassessed
+causal region yields `INCONCLUSIVE_UNASSESSED` on either revision, and any other
+inadequacy yields `INVALID`. Keeping classification and adjudication apart is what
+stops a single specimen from matching two outcome clauses at once.
 
 Requiring `NoCoverage == 0` over the seam-adjacent region rather than merely reporting it
 is the deliberate strengthening: a region with uncovered mutants has not demonstrated the
@@ -436,7 +470,8 @@ A specimen enters the calibration slice iff, in this order:
 
 ### 5.3 Calibration decision rule
 
-For an admitted specimen, **CALIBRATION PASS** iff all seven hold:
+For an admitted specimen, the verdict is `PASS` iff all seven conditions hold; §5.3.1 fixes
+the order in which they are adjudicated, and every other outcome falls out of that order.
 
 ```text
 harness qualification, on the clean baseline revision
@@ -461,25 +496,56 @@ these figures may be cited as §5.1 evidence. Conditions 2 and 4 together are th
 counterfactual that makes the witness failure attributable to the injection. Condition 7 is
 the detector obligation E1's general question does not carry.
 
-**If 1–6 hold and 7 returns `likely_witnessed`**, the outcome is `CALIBRATION FAIL — proxy`.
-Per P-038 §5.1 this kills the implementation or the proxy definition, **not the research
-hypothesis**: it is recorded, the proxy may be revised under a new version id, and the
-specimen stays in the record. It is not evidence against boundary blindness.
+#### 5.3.1 Adjudication order (one input, one verdict)
 
-**If 7 returns `indeterminate`**, the outcome is `CALIBRATION INCONCLUSIVE — proxy abstained`.
-It is never silently read as either pass or fail, and the abstention rate across specimens
-is reported alongside every calibration result.
+Stated as prose, the outcomes overlapped: a specimen with a red baseline witness *and* an
+abstaining proxy satisfied both the "any of 1–6 fails" clause and the "7 is indeterminate"
+clause, and §3.3.1's causal-region rule spoke of "the revision being qualified" while the
+prose carved out condition 6 only. A decision rule that admits two answers for one input is
+not a decision rule. The adjudication is therefore an ordered algorithm, evaluated top to
+bottom, **first match wins**:
 
-**If any of 1–6 fails**, the outcome is `SPECIMEN INVALID` with the failing condition named.
-An invalid specimen is not a result about detection in either direction. Two sub-cases are
-called out because they are easy to misread:
+```text
+1.  any of conditions 1-6 fails
+    AND the failure is unassessed mutants inside the causal region
+    (condition 3 on the baseline, or condition 6 on the injected revision)
+        -> INCONCLUSIVE_UNASSESSED
+           record which revision via baseline_/injected_unassessed_in_causal (§7)
+
+2.  any other failure among conditions 1-6
+        -> INVALID, naming the lowest-numbered failing condition
+
+3.  conditions 1-6 all hold, condition 7 = indeterminate
+        -> INCONCLUSIVE_PROXY
+
+4.  conditions 1-6 all hold, condition 7 = likely_witnessed
+        -> FAIL_PROXY
+
+5.  conditions 1-6 all hold, condition 7 = likely_unwitnessed
+        -> PASS
+```
+
+Condition 7 is **never** interpreted unless 1–6 all hold: a proxy verdict about a specimen
+that was never validly constructed carries no information, in either direction. Rule 1
+outranks rule 2 because "we could not measure it" and "we measured it and it was
+inadequate" are different states, and the §3.3.1 causal-region case is the first, on either
+revision — the earlier prose granted that only to the injected one.
+
+Two sub-cases worth naming, both now falling out of the order rather than needing exception:
 
 - **condition 2 fails** (assigned witness already red on the baseline) — the stand is broken
-  for that seam. Nothing about the injection may be concluded, and in particular a
-  subsequent condition-4 failure is meaningless.
-- **condition 6 fails on unassessed mutants inside the causal region** — per §3.3.1 the
-  outcome is `CALIBRATION INCONCLUSIVE`, not `SPECIMEN INVALID`: the specimen may be sound
-  and merely unmeasured.
+  for that seam. Rule 2 returns `INVALID` naming condition 2, and because 2 is
+  lower-numbered than 4, a co-occurring condition-4 failure is never reported as the cause.
+  Nothing about the injection may be concluded.
+- **`FAIL_PROXY`** (rule 4) — per P-038 §5.1 this kills the implementation or
+  the proxy definition, **not the research hypothesis**: it is recorded, the proxy may be
+  revised under a new version id, and the specimen stays in the record. It is not evidence
+  against boundary blindness.
+
+Neither inconclusive kind is ever silently read as pass or fail, and the rates of both —
+`INCONCLUSIVE_PROXY` and `INCONCLUSIVE_UNASSESSED` — are reported alongside every
+calibration result. The five verdict names here are exactly the `calibration_outcome`
+values of §7; no other outcome vocabulary exists.
 
 ---
 
@@ -530,7 +596,7 @@ improvised at the keyboard.
 
 **The §5.3 decision rule governs D-specimens only.** All three controls would trip it —
 C1a/C1b on condition 4 (no witness failure), C2 on condition 5 (local suite red) — and would
-be recorded as `SPECIMEN INVALID`, which would be a true statement about the wrong question.
+be recorded as `INVALID`, which would be a true statement about the wrong question.
 The controls are not candidate §5.1 specimens; they are checks on the apparatus. Each is
 scored against its own expected signature above, and `calibration_outcome` is `n/a` for all
 three.
@@ -590,7 +656,19 @@ injected_seam_line_coverage        float
 injected_seam_branch_coverage      float
 injected_seam_mutation_score       float
 injected_seam_unassessed           {no_coverage, timeout, ignored, compile_error}
-unassessed_in_causal_region        bool   (§3.3.1 -> INCONCLUSIVE)
+
+  raw mutant records, per revision — the authority from which the two
+  bools below are COMPUTED, never hand-set:
+baseline_mutants                   [{mutant_id, operator, status, locus}]
+injected_mutants                   [{mutant_id, operator, status, locus}]
+    locus: causal_region | seam_adjacent | outside
+
+  derived, kept per revision so an INCONCLUSIVE stays attributable:
+baseline_unassessed_in_causal      bool   (§3.3.1 via condition 3)
+injected_unassessed_in_causal      bool   (§3.3.1 via condition 6)
+
+test_domain                        frozen local suite only (§3.2.1)
+local_test_set_digest              digest of the frozen local suite's test-ID list
 repo_wide_coverage                 float  (context only, never a threshold)
 repo_wide_mutation_score           float  (context only, never a threshold)
 defect_class                       D1..D4 | C1a | C1b | C2
@@ -601,8 +679,19 @@ requires_post_composition_state    bool
 proxy_verdict                      likely_witnessed | likely_unwitnessed | indeterminate
 proxy_version                      e1-static-test-proxy/v0
 in_calibration_slice               bool
-calibration_outcome                PASS | FAIL_PROXY | INVALID | INCONCLUSIVE | n/a
+calibration_outcome                PASS | FAIL_PROXY | INVALID
+                                   | INCONCLUSIVE_PROXY
+                                   | INCONCLUSIVE_UNASSESSED
+                                   | n/a
+calibration_failing_condition      1..7 | null   (lowest-numbered, §5.3.1 rule 2)
 ```
+
+The two `INCONCLUSIVE` kinds are distinct values, not one value with a comment: proxy
+abstention and an unmeasured causal region are different states with different remedies, and
+a single label would make the §5.3.1 rates unreportable. `baseline_unassessed_in_causal` and
+`injected_unassessed_in_causal` are likewise kept apart so that a recorded
+`INCONCLUSIVE_UNASSESSED` can always be traced to the revision that caused it — with one
+shared bool the record could not say whether condition 3 or condition 6 had fired.
 
 ---
 
@@ -610,7 +699,8 @@ calibration_outcome                PASS | FAIL_PROXY | INVALID | INCONCLUSIVE | 
 
 Before the first measured run, one machine-readable manifest records: the resolved oracle
 case-index list (§1.4), the pinned tool versions (§2), the **frozen local-test plan** (§3.1),
-the `seam_adjacent_region` and the `causal_region` per seam (§3.2, §3.3.1), the StrykerJS
+the frozen local suite's **test-ID list and `local_test_set_digest`** (§3.2.1), the
+`seam_adjacent_region` and the `causal_region` per seam (§3.2, §3.3.1), the StrykerJS
 operator catalog as used (§6.1), the enumeration budget (§6.1), the proxy version id (§5.1),
 and the baseline revision sha.
 
@@ -635,7 +725,8 @@ The next steps, in order, each gated on the previous:
 3. **Baseline A** — interpreter for §1.1, green on its oracle slice, harness + coverage +
    mutation + manifest replay all demonstrated working;
 4. **local suite** — instantiated from the frozen plan, meeting the §3.3 thresholds with
-   `NoCoverage == 0` (§3.3.1), committed **before** any defect exists;
+   `NoCoverage == 0` (§3.3.1) **measured against the local suite alone** (§3.2.1), its
+   test-ID list and digest recorded, committed **before** any defect exists;
 5. **Baseline B** — the seam of §1.2, green on the full oracle set, **and every assigned
    witness W1–W6 green** (§4.1 arm 1);
 6. **proxy** — gated on the §5.1.1 circularity check, then `e1-static-test-proxy/v0`
