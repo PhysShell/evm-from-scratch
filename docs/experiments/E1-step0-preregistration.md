@@ -391,10 +391,25 @@ calibration local suite    the projected plan of §3.1.3, unmodified
                            used by: D1, D2, D3, D4, C1a, C1b
 
 c2_control_suite           the same projected plan
-                           + exactly one preregistered relational assertion
+                           + exactly one preregistered assertion that the
+                             projection excluded — a COLLABORATOR-ARGUMENT
+                             assertion, not a relational one
                            digest: c2_control_test_set_digest
                            used by: C2, and nothing else
 ```
+
+The distinction is load-bearing and an earlier draft of this section got it wrong. C2 is the
+positive control with a **local** oracle: it must break the §3.1.2(a) clause in exactly one
+named place while remaining a local test. Restoring a *relational* invariant instead would
+require a real producer and a real consumer, making C2 a composition test — a small duplicate
+of its own witness — and it would no longer demonstrate that the seam is visible locally when
+the oracle is present. The concrete instantiation is
+[Step 2 §9](./E1-step2-semantics-and-plan.md#9-c2_control_suite): a spy on the substituted
+collaborator, asserting the captured frame's field.
+
+What is frozen is the **relation between the domains**, not merely the two initial lists —
+the calibration domain grows by branch-completion tests, and C2's must grow with it or the
+contrast decays. See Step 2 §9.1 for the set-difference check that enforces it.
 
 `c2_control_suite` **never** contributes to any D-specimen's coverage, mutation score, or
 local-detection verdict, and never to a §5.1 calibration result. The separation is by
@@ -699,7 +714,7 @@ result is written up. The catalog deliberately does not consist only of absence 
 | **D4** | exceptional **propagation** | `success` | callee `REVERT` is flattened into a normal return | **fails** — see §6.1 | W2 fails |
 | **C1a** | **negative control** — ordinary local fault | none | `SUB` computes `a - b - 1` | **fails** | n/a — passes |
 | **C1b** | **negative control** — ordinary local fault | none | `LT` implemented as `≤` | **fails** | n/a — passes |
-| **C2** | **positive control** — boundary fault with a local oracle | `static` | as D1, but the plan adds the relational assertion the projection excludes | **fails** | W6 fails |
+| **C2** | **positive control** — boundary fault with a local oracle | `static` | as D1, but the plan adds one collaborator-argument assertion the projection excludes; stays a local test | **fails** | W6 fails |
 
 The D-rows each name an **assigned witness**, and §4.1's two-armed counterfactual applies to
 them. The C-rows do not, and this is not an oversight:
@@ -727,9 +742,10 @@ control behaves more agreeably be selected after the fact.
 **C1a/C1b** exist to show the local apparatus catches what it should — an experiment in
 which local evidence never catches anything is measuring a broken harness. **C2** exists to
 show the seam is not intrinsically invisible: when the local oracle is present, the boundary
-defect is caught locally. C2's assertion is the relational one the §3.1.2 projection
-withholds, added to the frozen plan as a declared exception and recorded both in the plan and
-in its manifest — not improvised at the keyboard.
+defect is caught locally. C2's assertion is one the §3.1.2 projection withholds — a
+collaborator-argument assertion, not a relational one, so that C2 stays a *local* test —
+added to the frozen plan as a declared exception and recorded both in the plan and in its
+manifest, never improvised at the keyboard.
 
 **The §5.3 decision rule governs D-specimens only.** All three controls would trip it —
 C1a/C1b on condition 4 (no witness failure), C2 on condition 5 (local suite red) — and would
@@ -789,8 +805,10 @@ Re-siting D4 until it passed would have been the same rigging in a new coat. It 
 in kind from C2: C2 is caught because an assertion was deliberately added outside the
 projection, D4 because its postcondition never left the projection. Its value is that it
 keeps the catalog from asserting what E1 is supposed to test, namely that boundary defects
-are *generally* invisible. They are not; only the relational ones are, and D4 is the
-preregistered counter-example.
+are *generally* invisible. They are not — only those whose deciding values the declared
+boundary hides, which is a broader class than the relational one (see Step 2 §5.2, where all
+fifteen producing-side postconditions fall to the collaborator-argument clause rather than to
+relationality). D4 is the preregistered counter-example.
 
 **Consequences for the calibration slice.** D1, D2 and D3 are the candidate §5.1 specimens.
 D4 will trip condition 5 and be recorded `INVALID(5)`, which for D4 is the predicted and
@@ -840,9 +858,10 @@ Both the gate outcome and `class_coverage` are recorded whichever way they land,
 may be resolved by re-siting a defect in this document.
 
 **C2 stays distinguishable.** C2 is D1 plus one assertion that the projection excludes,
-added to the plan as a declared exception. D1 is now a producer-side absence, so C2's added
-assertion is the relational one — exactly the oracle the projection withholds — and the
-contrast C2 exists to draw is intact.
+added to the plan as a declared exception. D1 is a producer-side absence, so C2's added
+assertion inspects exactly the value the boundary hides — the field of the frame handed to
+the substituted collaborator — and the contrast C2 exists to draw is intact while C2 remains
+local.
 
 ### 6.2 Mutation-representability rule
 

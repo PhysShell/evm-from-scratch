@@ -23,6 +23,7 @@ the writing order merely records how the document came to be.
 
 | Unit | Responsibility |
 |---|---|
+| `U-ENTRY` | construction of the root frame from a fixture and its transaction context |
 | `U-DEC` | instruction decode: opcode and immediate at a program counter |
 | `U-STK` | stack: push, pop, dup, swap, depth rules |
 | `U-ARI` | `ADD` `SUB` `MUL` `DIV` `MOD` over `uint256` |
@@ -88,6 +89,7 @@ be true; this is the resolution, and it is the model that makes the guard honest
 
 | Unit | Inputs | Owned state | Substituted collaborator | Own observable output |
 |---|---|---|---|---|
+| `U-ENTRY` | fixture code, tx context | — | — | the root `Frame` it returns |
 | `U-DEC` | code bytes, pc | — | — | decoded instruction, next pc |
 | `U-STK` | a stack, a value | the stack | — | resulting stack, or exceptional halt |
 | `U-ARI`, `U-CMP` | operand pair | — | — | result value |
@@ -103,6 +105,13 @@ be true; this is the resolution, and it is the model that makes the guard honest
 `U-CALL`'s substitution of `U-RUN` is the mock-heavy shape Step 0 §3 requires, and it is the
 *only* substitution in the seam's neighbourhood. The frame `U-CALL` builds is passed to that
 double and is therefore, by §3.1.2(a), outside what a local test may assert on.
+
+**`U-ENTRY` and `U-CALL` both build a `Frame`, and only one of them is locally assertable.**
+`U-ENTRY` *returns* its frame, so every field is its own observable output; `U-CALL` *passes*
+its frame to a substituted collaborator, so none of them is. The two rows are not
+inconsistent — the difference is entirely positional, and it is the clearest available
+illustration of §1.2: the same kind of object is observable or hidden according to where it
+sits relative to the substitution, not according to what it contains.
 
 ---
 
@@ -190,11 +199,25 @@ single uniform rule and names no alternatives.
 | `SEM-STO-1` | U-STO | 1 | `SSTORE` writes to the storage of the frame's `storage_owner` |
 | `SEM-STO-2` | U-STO | 1 | `SLOAD` reads from the storage of the frame's `storage_owner` |
 | `SEM-STO-3` | U-STO | 1 | a never-written slot reads as 0 |
+| `SEM-STO-4` | U-RUN | 1 | an exceptional halt does **not** undo storage writes already performed in that frame — the model has no journalling (see below) |
 | `SEM-GRD-1` | U-GRD | 1 | when the frame's `static` is set, `SSTORE` performs no write and halts exceptionally |
 | `SEM-GRD-2` | U-GRD | 1 | when the frame's `static` is clear, `SSTORE` proceeds |
 | `SEM-HLT-1` | U-HLT | 1 | `RETURN` yields `NORMAL` with returndata `memory[offset .. offset+len)` |
 | `SEM-HLT-2` | U-HLT | 1 | `REVERT` yields `EXCEPTIONAL` with returndata `memory[offset .. offset+len)` |
 | `SEM-HLT-3` | U-HLT | 1 | any other exceptional halt yields empty returndata |
+
+**Storage rollback is amputated, deliberately and explicitly.** A real EVM reverts state on
+an exceptional halt; `SEM-STO-4` says this model does not. `SSTORE` and `REVERT` are both in
+the frozen subset, so leaving the interaction unstated would have left two defensible
+implementations and no way to call either the correct baseline.
+
+Amputation rather than journalling, for three reasons: it matches the subset's existing
+amputations (gas, value transfer, calldata); journalling would add snapshot machinery in the
+seam's immediate neighbourhood, enlarging the very region whose blind spots are under study;
+and it costs no oracle correctness — checked against the corpus, **no in-subset case has a
+callee that both `SSTORE`s and `REVERT`s, and none has outer code that does**, so no oracle
+expectation depends on rollback either way. A defect requiring rollback semantics is out of
+scope for E1-v1.
 
 ### 3.3 Level B — the CALL-family operand contract
 
@@ -250,7 +273,29 @@ Every call kind × every boundary-carried identity field, so that no cell is lef
 | `SEM-RET-3` | U-RET | 1 | `RETURNDATASIZE` is the length of the most recent result's returndata |
 | `SEM-RET-4` | U-RET | 1 | `RETURNDATACOPY` copies from that returndata into memory |
 
-### 3.6 Level B — relational invariants across the seam
+### 3.6 Entry — the root frame contract
+
+The producing semantics specifies every *inner* frame, but the first frame has to come from
+somewhere, and W3/W4 depend on where. Upstream `#141` sets `tx.to = 0x…0aaa` and expects the
+callee's `CALLER` to be that address; `#99` sets `tx.from` and expects `CALLER` to return it;
+`#146` reads storage through a `DELEGATECALL` against the outer frame's context. Leaving the
+entry frame to "whatever the harness does" would have made D2 and D3 depend on unspecified
+state.
+
+| ID | Unit | Cases | Postcondition |
+|---|---|---|---|
+| `SEM-ROOT-1` | U-ENTRY | 1 | `code` is the fixture's own code |
+| `SEM-ROOT-2` | U-ENTRY | 1 | `address` is `tx.to`, or the zero address when `tx.to` is absent |
+| `SEM-ROOT-3` | U-ENTRY | 1 | `caller` is `tx.from`, or the zero address when `tx.from` is absent |
+| `SEM-ROOT-4` | U-ENTRY | 1 | `storage_owner` equals `address` |
+| `SEM-ROOT-5` | U-ENTRY | 1 | `static` is false |
+| `SEM-ROOT-6` | U-ENTRY | 1 | `pc` is 0 |
+| `SEM-ROOT-7` | U-ENTRY | 1 | `stack`, `memory` and `returndata` are all empty |
+
+`tx.value`, `tx.data`, `tx.origin` and `tx.gasprice` appear in the corpus but are outside the
+frozen subset (Step 0 §1.3); `U-ENTRY` ignores them.
+
+### 3.7 Level B — relational invariants across the seam
 
 Required by Step 0 §3.1.1. Each names a real producer *and* a real consumer.
 
@@ -267,8 +312,9 @@ Required by Step 0 §3.1.1. Each names a real producer *and* a real consumer.
 
 ## 4. Completeness statement
 
-§3 declares **71** postconditions: 25 at level A, 11 for memory/storage/halting, 8 for the
-CALL-family operand contract, 15 producing-side, 6 consuming-side, 6 relational. The
+§3 declares **79** postconditions: 25 at level A, 12 for memory/storage/halting (including the
+rollback amputation), 7 for the entry frame, 8 for the CALL-family operand contract, 15
+producing-side, 6 consuming-side, 6 relational. The
 producing side is now a full kind × field matrix, so no call kind has an unspecified identity
 field — the gap an earlier draft had, where `STATICCALL` specified only `static` and
 `DELEGATECALL` omitted it.
@@ -282,9 +328,9 @@ Step 0 §3.1.2(b), applied verbatim to every postcondition in §3:
 > `P` survives iff every value needed to decide `P` is observable through the declared local
 > interface of that unit, with the far side substituted.
 
-### 5.1 Surviving — 50 postconditions
+### 5.1 Surviving — 58 postconditions
 
-Every postcondition of §3.1, §3.2, §3.3 and §3.5 survives. Each is decided from its unit's
+Every postcondition of §3.1, §3.2, §3.3, §3.5 and §3.6 survives. Each is decided from its unit's
 own inputs, its owned state, and its own outputs, with no substituted collaborator standing
 between the assertion and the value.
 
@@ -295,6 +341,10 @@ guard is locally tested and honestly verified.**
 
 `SEM-CALL-1..8` survive: operand arity, pop order and consumption are decidable from
 `U-CALL`'s own stack before and after, with no reference to the double's behaviour.
+
+`SEM-ROOT-1..7` survive because `U-ENTRY` *returns* the frame it builds (§1.3). This is the
+positional asymmetry, not an inconsistency: the identical field `static` is assertable on
+`U-ENTRY`'s output and unassertable on `U-CALL`'s collaborator argument.
 
 ### 5.2 Excluded — 21 postconditions
 
@@ -320,8 +370,8 @@ observation set.
 ### 5.4 Count
 
 ```text
-postconditions in §3        71
-surviving  (§5.1)           50
+postconditions in §3        79
+surviving  (§5.1)           58
 excluded   (§5.2)           21     15 producing-side + 6 relational
 ```
 
@@ -386,7 +436,7 @@ survives after the obvious ways of manufacturing one by under-specification have
 
 Step 0 §3.1.3 rule 1, at case granularity: **one test per (surviving postcondition × case)**.
 IDs are `LT-<postcondition-id>` for a single-case postcondition and
-`LT-<postcondition-id>/<CASE>` otherwise. 50 postconditions yield **188** case IDs:
+`LT-<postcondition-id>/<CASE>` otherwise. 58 postconditions yield **196** case IDs:
 
 ```text
 LT-SEM-ARI-1/ADD            LT-SEM-ARI-1/DIV            LT-SEM-ARI-1/MOD
@@ -426,32 +476,35 @@ LT-SEM-HLT-2                LT-SEM-HLT-3                LT-SEM-JMP-1
 LT-SEM-JMP-2                LT-SEM-JMP-3                LT-SEM-MEM-1
 LT-SEM-MEM-2                LT-SEM-MEM-3                LT-SEM-RET-1
 LT-SEM-RET-2                LT-SEM-RET-3                LT-SEM-RET-4
-LT-SEM-RUN-1                LT-SEM-RUN-2                LT-SEM-RUN-3
-LT-SEM-RUN-4                LT-SEM-SEAM-C1              LT-SEM-SEAM-C2
-LT-SEM-STK-1                LT-SEM-STK-2                LT-SEM-STK-3
-LT-SEM-STK-4/DUP1           LT-SEM-STK-4/DUP10          LT-SEM-STK-4/DUP11
-LT-SEM-STK-4/DUP12          LT-SEM-STK-4/DUP13          LT-SEM-STK-4/DUP14
-LT-SEM-STK-4/DUP15          LT-SEM-STK-4/DUP16          LT-SEM-STK-4/DUP2
-LT-SEM-STK-4/DUP3           LT-SEM-STK-4/DUP4           LT-SEM-STK-4/DUP5
-LT-SEM-STK-4/DUP6           LT-SEM-STK-4/DUP7           LT-SEM-STK-4/DUP8
-LT-SEM-STK-4/DUP9           LT-SEM-STK-5/SWAP1          LT-SEM-STK-5/SWAP10
-LT-SEM-STK-5/SWAP11         LT-SEM-STK-5/SWAP12         LT-SEM-STK-5/SWAP13
-LT-SEM-STK-5/SWAP14         LT-SEM-STK-5/SWAP15         LT-SEM-STK-5/SWAP16
-LT-SEM-STK-5/SWAP2          LT-SEM-STK-5/SWAP3          LT-SEM-STK-5/SWAP4
-LT-SEM-STK-5/SWAP5          LT-SEM-STK-5/SWAP6          LT-SEM-STK-5/SWAP7
-LT-SEM-STK-5/SWAP8          LT-SEM-STK-5/SWAP9          LT-SEM-STK-6/DUP1
-LT-SEM-STK-6/DUP10          LT-SEM-STK-6/DUP11          LT-SEM-STK-6/DUP12
-LT-SEM-STK-6/DUP13          LT-SEM-STK-6/DUP14          LT-SEM-STK-6/DUP15
-LT-SEM-STK-6/DUP16          LT-SEM-STK-6/DUP2           LT-SEM-STK-6/DUP3
-LT-SEM-STK-6/DUP4           LT-SEM-STK-6/DUP5           LT-SEM-STK-6/DUP6
-LT-SEM-STK-6/DUP7           LT-SEM-STK-6/DUP8           LT-SEM-STK-6/DUP9
-LT-SEM-STK-6/SWAP1          LT-SEM-STK-6/SWAP10         LT-SEM-STK-6/SWAP11
-LT-SEM-STK-6/SWAP12         LT-SEM-STK-6/SWAP13         LT-SEM-STK-6/SWAP14
-LT-SEM-STK-6/SWAP15         LT-SEM-STK-6/SWAP16         LT-SEM-STK-6/SWAP2
-LT-SEM-STK-6/SWAP3          LT-SEM-STK-6/SWAP4          LT-SEM-STK-6/SWAP5
-LT-SEM-STK-6/SWAP6          LT-SEM-STK-6/SWAP7          LT-SEM-STK-6/SWAP8
-LT-SEM-STK-6/SWAP9          LT-SEM-STK-7                LT-SEM-STO-1
-LT-SEM-STO-2                LT-SEM-STO-3
+LT-SEM-ROOT-1               LT-SEM-ROOT-2               LT-SEM-ROOT-3
+LT-SEM-ROOT-4               LT-SEM-ROOT-5               LT-SEM-ROOT-6
+LT-SEM-ROOT-7               LT-SEM-RUN-1                LT-SEM-RUN-2
+LT-SEM-RUN-3                LT-SEM-RUN-4                LT-SEM-SEAM-C1
+LT-SEM-SEAM-C2              LT-SEM-STK-1                LT-SEM-STK-2
+LT-SEM-STK-3                LT-SEM-STK-4/DUP1           LT-SEM-STK-4/DUP10
+LT-SEM-STK-4/DUP11          LT-SEM-STK-4/DUP12          LT-SEM-STK-4/DUP13
+LT-SEM-STK-4/DUP14          LT-SEM-STK-4/DUP15          LT-SEM-STK-4/DUP16
+LT-SEM-STK-4/DUP2           LT-SEM-STK-4/DUP3           LT-SEM-STK-4/DUP4
+LT-SEM-STK-4/DUP5           LT-SEM-STK-4/DUP6           LT-SEM-STK-4/DUP7
+LT-SEM-STK-4/DUP8           LT-SEM-STK-4/DUP9           LT-SEM-STK-5/SWAP1
+LT-SEM-STK-5/SWAP10         LT-SEM-STK-5/SWAP11         LT-SEM-STK-5/SWAP12
+LT-SEM-STK-5/SWAP13         LT-SEM-STK-5/SWAP14         LT-SEM-STK-5/SWAP15
+LT-SEM-STK-5/SWAP16         LT-SEM-STK-5/SWAP2          LT-SEM-STK-5/SWAP3
+LT-SEM-STK-5/SWAP4          LT-SEM-STK-5/SWAP5          LT-SEM-STK-5/SWAP6
+LT-SEM-STK-5/SWAP7          LT-SEM-STK-5/SWAP8          LT-SEM-STK-5/SWAP9
+LT-SEM-STK-6/DUP1           LT-SEM-STK-6/DUP10          LT-SEM-STK-6/DUP11
+LT-SEM-STK-6/DUP12          LT-SEM-STK-6/DUP13          LT-SEM-STK-6/DUP14
+LT-SEM-STK-6/DUP15          LT-SEM-STK-6/DUP16          LT-SEM-STK-6/DUP2
+LT-SEM-STK-6/DUP3           LT-SEM-STK-6/DUP4           LT-SEM-STK-6/DUP5
+LT-SEM-STK-6/DUP6           LT-SEM-STK-6/DUP7           LT-SEM-STK-6/DUP8
+LT-SEM-STK-6/DUP9           LT-SEM-STK-6/SWAP1          LT-SEM-STK-6/SWAP10
+LT-SEM-STK-6/SWAP11         LT-SEM-STK-6/SWAP12         LT-SEM-STK-6/SWAP13
+LT-SEM-STK-6/SWAP14         LT-SEM-STK-6/SWAP15         LT-SEM-STK-6/SWAP16
+LT-SEM-STK-6/SWAP2          LT-SEM-STK-6/SWAP3          LT-SEM-STK-6/SWAP4
+LT-SEM-STK-6/SWAP5          LT-SEM-STK-6/SWAP6          LT-SEM-STK-6/SWAP7
+LT-SEM-STK-6/SWAP8          LT-SEM-STK-6/SWAP9          LT-SEM-STK-7
+LT-SEM-STO-1                LT-SEM-STO-2                LT-SEM-STO-3
+LT-SEM-STO-4
 ```
 
 ### 8.1 Deterministic input selection
@@ -473,17 +526,55 @@ Step 0 §3.1.3 rule 2 adds one test per branch left uncovered by rule 1. Branche
 until the clean implementation does, so their IDs cannot be enumerated here. Frozen instead:
 
 - ID form `LT-BR-<unit>-<nnn>`, allocated in ascending order of source position;
-- the input for each is the first value in the §8.1 order that reaches the branch;
+- the input for each is the first value in the **total** order of §8.2.1 that reaches the branch;
 - they may assert **only** postconditions surviving §5.1, never one the projection excluded.
+
+#### 8.2.1 Total input enumeration
+
+§8.1 orders numbers, pairs, addresses, byte strings and stack depths — but a clean
+implementation will branch on `frame.static`, on `FrameResult.halt`, on the call kind, on
+whether an account exists, and on combinations of those. For such predicates "the first value
+in §8.1 order" names nothing, and author choice would walk straight back in at step 6 of §10,
+which is precisely what `LT-BR-*` exists to prevent. The order is therefore total over every
+domain the frozen model contains:
+
+```text
+bool                    false, true
+FrameResult.halt        NORMAL, EXCEPTIONAL
+call kind               CALL, STATICCALL, DELEGATECALL
+address                 0x…0aaa, 0x…0c42, 0x…0dad, zero address   (§8.1 rule 3, then zero)
+account presence        absent, present-with-empty-code, present-with-non-empty-code
+uint256                 §8.1 rule 1
+byte string             §8.1 rule 4
+stack depth             §8.1 rule 5
+
+records (Frame, FrameResult, operand tuples)
+                        the Cartesian product of their field domains,
+                        enumerated lexicographically by the field order in
+                        which §2 declares them
+```
+
+**And the stop rule, which matters more than the order.** If a branch is reachable but no
+value in the frozen domain reaches it:
+
+```text
+record  UNREACHABLE_UNDER_FROZEN_DOMAIN  naming the branch,
+halt the qualification,
+and amend the preregistration BEFORE any measurement.
+```
+
+A hand-written fixture invented at the keyboard to close that gap is prohibited. Without this
+rule the enumeration is deterministic only until the first `if (frame.static)`, and a single
+improvised fixture would silently convert the frozen plan back into an authored one.
 
 Two digests, therefore:
 
 ```text
-plan_core_digest      over the 188 case IDs above, frozen NOW (§8.3)
+plan_core_digest      over the 196 case IDs above, frozen NOW (§8.3)
 
 test_domain_digest    over the realised list, recorded at step 6 of §10 —
                       after the clean Baseline B exists and before any
-                      defect is injected. Must be a superset of the 188,
+                      defect is injected. Must be a superset of the 196,
                       differing only by LT-BR-* entries generated by the
                       frozen procedure.
 ```
@@ -493,11 +584,11 @@ invalidates the run.
 
 ### 8.3 `plan_core_digest`
 
-SHA-256 over the 188 IDs, sorted ascending as ASCII, joined by `\n`, with a trailing newline.
+SHA-256 over the 196 IDs, sorted ascending as ASCII, joined by `\n`, with a trailing newline.
 The listing in §8 is the canonical input.
 
 ```text
-plan_core_digest = 22ff26b4cdeacdfa08c9fb3adbb3fe89183d3bbeb8157baeb7f2107d48ec1131
+plan_core_digest = 1170fc83fe763c1ce78b61b900e493c66cc7cfc3dcaa8cc7ea77b5f88cb505fd
 ```
 
 ---
@@ -511,7 +602,7 @@ suite permitted one assertion the projection withholds. It must therefore remain
 test that breaks the discipline in exactly one place — not a composition test.
 
 ```text
-c2_control_suite = the 188 core IDs of §8
+c2_control_core  = the 196 core IDs of §8
                  + exactly one preregistered assertion:
 
     LT-C2-SEM-SEAM-P7
@@ -519,6 +610,36 @@ c2_control_suite = the 188 core IDs of §8
         Perform STATICCALL. Inspect the frame argument the spy captured.
         Assert capturedFrame.static === true.
 ```
+
+### 9.1 The frozen relation, not two frozen lists
+
+Freezing the two *core* lists is not enough. At step 6 of §10 the calibration domain grows by
+the realised `LT-BR-*` set, and if C2's domain were left at "196 core + one assertion" the
+two would diverge into:
+
+```text
+D1   196 core + LT-BR-*
+C2   196 core + spy assertion
+```
+
+— which is no longer *the same evidence plus one local oracle*, and the contrast C2 exists to
+draw would be gone. What is frozen is therefore the **relation**:
+
+```text
+final_calibration_domain = 196 core + realised LT-BR-*
+final_c2_domain          = final_calibration_domain + LT-C2-SEM-SEAM-P7
+```
+
+checked mechanically at step 6, before any defect exists:
+
+```text
+final_c2_domain  -  final_calibration_domain  ==  { LT-C2-SEM-SEAM-P7 }
+final_calibration_domain  -  final_c2_domain  ==  { }
+```
+
+Either check failing invalidates the run. `c2_control_core_digest` below remains as the
+pre-implementation commitment to the core plus the one assertion; the final domains carry
+`test_domain_digest` and `c2_control_test_set_digest`, both recorded at step 6.
 
 Two points this pins down:
 
@@ -541,7 +662,7 @@ W6   both sides real, no doubles at all                           -> red
 D-specimen, and contributes to no §5.1 result.
 
 ```text
-c2_control_core_digest = 7c7bc4ee7d07476709213c03db8256ffd8b88e4080af0d38408836edda979d17
+c2_control_core_digest = 4a86085f74352b328b7bd9fc51264741320262195afcb44348442340ecc6f40d
 ```
 
 ---
