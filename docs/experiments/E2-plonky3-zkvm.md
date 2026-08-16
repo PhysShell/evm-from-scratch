@@ -6,6 +6,22 @@ Can a deliberately small EVM subset be turned into an end-to-end verifiable-comp
 
 The purpose is educational and experimental: connect ordinary interpreter semantics to an execution trace and then to algebraic constraints/proofs without inheriting the complexity of a production zkEVM.
 
+## Relationship to our projects
+
+E2 is the concrete bridge between the recent **Plonky3 / Noir / Cairo / ZK-learning** work and the practical question of **verifiable computation**, including the earlier question of whether payment or accounting calculations can be independently verified.
+
+Its job is not to build a production zkEVM. Its job is to give us a specimen small enough that we can inspect every semantic transition and still run a real prover/verifier end to end.
+
+Project-level use is:
+
+- **Plonky3 investigation:** provide a non-trivial but bounded workload for learning AIR/constraint design, trace generation, proof construction, and verification;
+- **Noir / Cairo comparison:** provide a common tiny computation model against which higher-level proving approaches can later be compared without changing the business semantics under test;
+- **verifiable payment/calculation experiments:** establish the reusable pattern `program + inputs -> output + proof` before introducing payment rules, invoices, tariffs, rounding, privacy, or confidential inputs;
+- **OwnAudit / assurance research:** create a formally constrained execution surface that later E3 can compare with ordinary testing/mutation evidence;
+- **not Own.NET/Qodec production:** E2 must remain a research fixture and must not become an incidental dependency of unrelated production code.
+
+A successful E2 proves only that the declared output is consistent with the frozen MiniEVM constraints and public inputs. It does **not** prove that the specification itself is economically, legally, or semantically correct. That distinction is a first-class input to E3.
+
 ## Scope
 
 Start with a frozen MiniEVM subset. Candidate first version:
