@@ -257,16 +257,46 @@ The declared boundary states, as its load-bearing clause:
 > A local test asserts through the unit's own observable interface. It does not assert on
 > the internal fields of a value handed to a substituted collaborator.
 
-**(b) The exclusion rule.** A postcondition is **outside** the local observable contract iff
-its truth quantifies over a real producer *and* a real consumer simultaneously — a relational
-postcondition across the seam. With one side substituted, such an assertion would be a claim
-about the double, not about the system: the stub supplies the very value being checked, so
-the test passes by construction and measures nothing.
+**(b) The survival rule.** Stated positively, over the observation set:
 
-Both clauses are properties of the postcondition's *form* and the boundary's *topology*,
-decidable from §3.1.1 alone. Neither consults the defect catalog. An assertion is therefore
-absent from the local suite because the boundary hides it, never because an author declined
-to write it.
+```text
+P survives local_observation_projection
+  iff every value needed to decide P is observable through the declared
+      local interface of that unit, with the far side substituted.
+
+Explicitly NOT locally observable:
+  - internal fields of a value handed to a substituted collaborator;
+  - the actual state or behaviour of the substituted collaborator;
+  - relations requiring observations from both real sides at once.
+
+Every producer<->consumer relational postcondition is therefore excluded,
+but relationality is SUFFICIENT for exclusion, never NECESSARY.
+```
+
+An earlier draft made relationality the *iff*, and that did not license the paper check it
+was written to support. Take D1's producing-side postcondition, "`STATICCALL` constructs a
+callee frame with `static = true`". It quantifies over the producer alone — no real consumer
+appears in it — so under an `iff`-relational rule it would **survive** the projection, get a
+local test, and be caught locally. §6.1 nonetheless declared it unobservable, correctly, but
+by appeal to clause (a) rather than to the stated rule. The normative rule and the paper
+check were using different criteria, and only the observation-set form covers both.
+
+Under the rule as now stated the two agree:
+
+| Postcondition | Decidable from the unit's own interface? | Survives |
+|---|---|---|
+| `STATICCALL` ⇒ constructed frame has `static = true` | no — the frame's only outward manifestation is an argument to the substituted callee | **no** |
+| `frame.static` ⇒ `SSTORE` refused | yes — asserted against a correct stub frame, through the callee's own storage effects | **yes** |
+
+So the callee-side guard keeps its local test and stays honestly verified, while the
+producer-side construction has no local assertion available to it. D1 breaks only the
+producer, and the local suite is green — not by omission, but because the declared boundary
+affords no observation of that value.
+
+The rule is a property of the postcondition's *form* and the boundary's *topology*,
+decidable from §3.1.1 alone. It does not consult the defect catalog. An assertion is
+therefore absent from the local suite because the boundary hides it, never because an author
+declined to write it.
 
 #### 3.1.3 The frozen local test plan
 
@@ -319,7 +349,7 @@ containing (a) caller-side construction of the boundary-carried fields and (b) c
 consumption of and guarding on them. Repository-wide coverage and repository-wide mutation
 score are recorded for context and are **not** admissible as the §3.3 thresholds.
 
-### 3.2.1 Test domain — which tests may produce the evidence
+#### 3.2.1 Test domain — which tests may produce the evidence
 
 `seam_adjacent_region` says which *production code* is measured. It says nothing about
 which *tests* do the measuring, and that second question decides whether the whole
@@ -341,16 +371,44 @@ Each suite has exactly one job, and no second one:
 | Suite | Answers | Never used for |
 |---|---|---|
 | oracle set (§1.4) | is the baseline correct? | coverage, mutation, local detection |
-| frozen local suite (§3.1.3) | local coverage, mutation, local detection | correctness, composition |
+| **calibration local suite** (§3.1.3) | local coverage, mutation, local detection for D1–D4, C1a, C1b | correctness, composition, anything C2 |
+| **`c2_control_suite`** (§3.2.2) | C2 only | every D-specimen measurement, and §5.1 |
 | witnesses W1–W6 (§4) | the composition counterfactual | coverage, mutation, local detection |
 
-The freeze manifest records the frozen local suite's exact test-ID list and a
-`local_test_set_digest` over it, so the domain of any recorded measurement can be verified
-after the fact rather than trusted.
+#### 3.2.2 `c2_control_suite` — why C2 needs a domain of its own
+
+C2 is D1 plus exactly one assertion that the §3.1.2 projection withholds. If that assertion
+were added to *the* frozen local suite, the suite would carry it for every specimen — and D1,
+whose whole construction is that no local assertion reaches the corrupted value, would go red
+under its own control. The control would destroy the specimen it exists to contrast with.
+
+There are therefore two frozen domains, both fixed before implementation:
+
+```text
+calibration local suite    the projected plan of §3.1.3, unmodified
+                           digest: calibration_local_test_set_digest
+                           used by: D1, D2, D3, D4, C1a, C1b
+
+c2_control_suite           the same projected plan
+                           + exactly one preregistered relational assertion
+                           digest: c2_control_test_set_digest
+                           used by: C2, and nothing else
+```
+
+`c2_control_suite` **never** contributes to any D-specimen's coverage, mutation score, or
+local-detection verdict, and never to a §5.1 calibration result. The separation is by
+distinct digest rather than by convention, so a later run cannot quietly hand the extended
+suite to the mutation engine alongside D1.
+
+C1a and C1b need no extension: they are ordinary local faults that the projected plan already
+observes, and they run on the calibration suite unchanged.
+
+The freeze manifest records both suites' exact test-ID lists and both digests, so the domain
+of any recorded measurement can be verified after the fact rather than trusted.
 
 ### 3.3 Thresholds, and the revision they are measured on
 
-| Measurement | Threshold over `seam_adjacent_region`, frozen local suite only (§3.2.1) |
+| Measurement | Threshold over `seam_adjacent_region`, specimen's own test domain only (§3.2.1) |
 |---|---|
 | Line coverage | ≥ 95% |
 | Branch coverage | ≥ 90% |
@@ -380,7 +438,9 @@ P-038 §5.1 evidence.
 A mutation score is only as honest as its denominator. With `killed 9 / survived 1 /
 NoCoverage 100`, the ratio reads 90% while a hundred mutants sit unexamined.
 
-Within `seam_adjacent_region`, mutants produced by the frozen local suite alone (§3.2.1),
+Within `seam_adjacent_region`, mutants produced by the specimen's own test domain alone
+(§3.2.1 — the calibration local suite for every D-specimen and C1a/C1b, `c2_control_suite`
+for C2 and nothing else),
 on whichever revision is being qualified — baseline or injected, symmetrically:
 
 ```text
@@ -692,15 +752,21 @@ mechanism we intend to demonstrate and then demonstrating it is not evidence.
 ### 6.1 Paper check — can these defects logically pass locally?
 
 The §3.1.2 projection is only a repair if the catalog can actually clear it. Worked through
-before any code, per defect: **is the corrupted postcondition relational across the seam, and
-is the corrupted value observable through the unit's own interface?**
+before any code, applying the §3.1.2(b) survival rule verbatim: **is every value needed to
+decide the corrupted postcondition observable through that unit's own interface, with the far
+side substituted?**
 
-| | Corrupted postcondition | Relational? | Locally observable? | Predicted local |
+| | Corrupted postcondition | Values needed to decide it | Survives projection | Predicted local |
 |---|---|---|---|---|
-| **D1** | `STATICCALL` ⇒ callee frame carries `static` | yes — binds caller's intent to callee's view | no; the frame is an argument to the substituted callee, and the callee's own guard is intact and passes its own tests | **passes** |
-| **D2** | `DELEGATECALL` ⇒ callee frame carries the *caller's* `address` | yes | no; same argument-to-double position | **passes** |
-| **D3** | `CALL` ⇒ callee frame carries the immediate caller's address as `caller` | yes | no; same | **passes** |
-| **D4** | callee `REVERT` ⇒ caller-visible failure | **no** — single-sided | **yes** | **fails** |
+| **D1** | `STATICCALL` ⇒ constructed callee frame carries `static = true` | the frame's internals — manifested only as an argument to the substituted callee | **no** (clause a) | **passes** |
+| **D2** | `DELEGATECALL` ⇒ constructed frame carries the *caller's* `address` | same — argument to the double | **no** (clause a) | **passes** |
+| **D3** | `CALL` ⇒ constructed frame carries the immediate caller's address as `caller` | same — argument to the double | **no** (clause a) | **passes** |
+| **D4** | callee `REVERT` ⇒ caller-visible failure | the unit's own output: the callee's returned frame result, or the caller's own stack given a stub that reports failure | **yes** | **fails** |
+
+Note that D1–D3 are excluded by clause (a) — the collaborator-argument clause — and not by
+relationality. Their producing-side postconditions mention no real consumer at all. This is
+exactly the case the earlier `iff`-relational wording got wrong, and the reason the rule is
+now stated over the observation set.
 
 **D1 was re-specified to survive this check.** It previously read "the callee-side write
 guard is not implemented at all" — a *single-sided* consuming postcondition, fully observable
@@ -726,12 +792,51 @@ are *generally* invisible. They are not; only the relational ones are, and D4 is
 preregistered counter-example.
 
 **Consequences for the calibration slice.** D1, D2 and D3 are the candidate §5.1 specimens.
-D4 will trip condition 5 and be recorded `INVALID`, which for D4 is the predicted and correct
-result rather than a defect in the stand. Every entry in the table is a **falsifiable
-prediction**, not a guarantee — if D1–D3 also go red locally, no §5.1 specimen exists in this
-catalog, and per P-038 §5.1 that kills the implementation or the definition, **not the
-hypothesis**. It is recorded as `CALIBRATION FAIL — definition` and the catalog is revised in
-an `E1-v2`, never by quietly re-siting a defect here.
+D4 will trip condition 5 and be recorded `INVALID(5)`, which for D4 is the predicted and
+correct result rather than a defect in the stand.
+
+Every entry above is a **falsifiable prediction**, not a guarantee. It is made here against
+the field-level description of the seam; step 2 will produce the concrete postcondition list,
+and the check must be re-run against *that* before any code exists.
+
+#### 6.1.1 The step-2 definition gate
+
+The outcome of that re-run is **not** a `calibration_outcome`. Those five values (§7) score a
+measured specimen; this fires at step 2, before an interpreter or a measurement exists, and
+needs its own vocabulary:
+
+```text
+step2_definition_gate
+
+  PASS
+      at least one of D1-D3 survives the concrete projection.
+      §5.1 calibration is runnable; proceed to step 3.
+
+  FAIL_NO_ELIGIBLE_SPECIMEN
+      none of D1-D3 survives.
+      Stop E1-v1 before implementation and before any measurement.
+      Per P-038 §5.1 this kills the implementation or the definition,
+      NOT the research hypothesis. Preserve the record; redesign only
+      as E1-v2.
+```
+
+One surviving specimen is the minimum for §5.1 to be runnable at all, and that is what the
+gate tests. It is deliberately *not* "all three must survive" — requiring that would stop a
+runnable calibration over a catalog-breadth concern, which is a different question and gets
+its own record:
+
+```text
+class_coverage      which defect classes retain a surviving specimen
+                    absence   -> D1
+                    misbinding -> D2, D3
+```
+
+A class with no survivor is **declared out of scope for E1-v1 results** and may not be
+claimed in the write-up. Concretely: if D1 falls but D2/D3 stand, calibration proceeds and
+the absence class is reported as untested — never as tested-and-negative.
+
+Both the gate outcome and `class_coverage` are recorded whichever way they land, and neither
+may be resolved by re-siting a defect in this document.
 
 **C2 stays distinguishable.** C2 is D1 plus one assertion that the projection excludes,
 added to the plan as a declared exception. D1 is now a producer-side absence, so C2's added
@@ -807,8 +912,10 @@ injected_unassessed_in_causal      bool   (§3.3.1 via condition 6)
   provenance — what was actually measured, not what was intended:
 baseline_revision_sha              the exact commit measured as clean
 injected_revision_sha              the exact commit measured as defective
-test_domain                        frozen local suite only (§3.2.1)
-local_test_set_digest              digest of the frozen local suite's test-ID list
+test_domain_id                     calibration_local | c2_control   (§3.2.1-2)
+test_domain_digest                 digest of that domain's test-ID list
+                                   (calibration_local_test_set_digest, or
+                                    c2_control_test_set_digest for C2)
 toolchain_digest                   pinned (language, runner, coverage,
                                    mutation engine) version tuple (§2)
 repo_wide_coverage                 float  (context only, never a threshold)
@@ -843,7 +950,8 @@ Before the first measured run, one machine-readable manifest records: the resolv
 case-index list (§1.4), the pinned tool versions (§2), the complete normative semantics (§3.1.1), the
 declared local test boundary and observation projection (§3.1.2), the **frozen local-test
 plan** (§3.1.3),
-the frozen local suite's **test-ID list and `local_test_set_digest`** (§3.2.1), the
+**both** test domains' test-ID lists and digests — `calibration_local_test_set_digest` and
+`c2_control_test_set_digest` (§3.2.1, §3.2.2) — the
 `seam_adjacent_region` and the `causal_region` per seam (§3.2, §3.3.1), the StrykerJS
 operator catalog as used (§6.2), the enumeration budget (§6.2), the proxy version id (§5.1),
 and the baseline revision sha.
@@ -867,13 +975,16 @@ The next steps, in order, each gated on the previous:
    the declared local test boundary and observation projection (§3.1.2), and the exhaustively
    enumerated plan derived from them (§3.1.3), all frozen **before** any test or interpreter
    code is written. The §6.1 paper check is re-run against the concrete postcondition list at
-   this point: if D1–D3 do not in fact clear the projection, that is discovered here, before
-   any measurement, and is resolved by an `E1-v2` rather than by re-siting a defect;
+   this point and scored by the **step-2 definition gate** (§6.1.1): `PASS` if at least one
+   of D1–D3 survives, `FAIL_NO_ELIGIBLE_SPECIMEN` if none does — in which case E1-v1 stops
+   here, before implementation and before any measurement, and is resolved by an `E1-v2`
+   rather than by re-siting a defect. `class_coverage` is recorded either way;
 3. **Baseline A** — interpreter for §1.1, green on its oracle slice, harness + coverage +
    mutation + manifest replay all demonstrated working;
 4. **local suite** — instantiated from the frozen plan, meeting the §3.3 thresholds with
-   `NoCoverage == 0` (§3.3.1) **measured against the local suite alone** (§3.2.1), its
-   test-ID list and digest recorded, committed **before** any defect exists;
+   `NoCoverage == 0` (§3.3.1) **measured against the calibration local suite alone**
+   (§3.2.1), both it and `c2_control_suite` enumerated with their digests recorded,
+   committed **before** any defect exists;
 5. **Baseline B** — the seam of §1.2, green on the full oracle set, **and every assigned
    witness W1–W6 green** (§4.1 arm 1);
 6. **proxy** — gated on the §5.1.1 circularity check, then `e1-static-test-proxy/v0`
