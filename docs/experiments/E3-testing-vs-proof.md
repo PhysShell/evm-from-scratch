@@ -6,6 +6,22 @@ When the same small virtual machine is evaluated by ordinary tests/mutation anal
 
 This is deliberately a downstream experiment. It must not be implemented until E1 and E2 have frozen the artifacts that E3 consumes. Otherwise the comparison can be tuned after seeing results and becomes scientifically worthless with impressive-looking charts.
 
+## Relationship to our projects
+
+E3 is the explicit **bridge experiment between the OwnAudit / P-038 assurance work and the Plonky3 / verifiable-computation work**.
+
+E1 asks whether strong local testing evidence can miss composition defects. E2 asks whether the same small computation can be constrained and proven. E3 asks the question that neither can answer alone: **what additional failure surface does each assurance mechanism cover, and where can they share the same blind spot?**
+
+Project-level use is:
+
+- **OwnAudit / P-038:** test whether the boundary/composition phenomenon survives when a second, formally constrained assurance mechanism is added;
+- **Blind Spot Miner / leakmine:** provide defect-class labels that can later inform which mined fault families are plausible candidates for cross-technique blind spots;
+- **Plonky3 / ZK research:** falsify the sloppy interpretation that a valid proof means the intended computation is correct, by separating implementation, constraint, specification, and boundary-model defects;
+- **verifiable payment/calculation work:** establish what a proof can and cannot say before any payment rule is trusted merely because it verifies;
+- **Own.NET/Qodec:** no production dependency; any relevance is methodological evidence about assurance boundaries, not a reason to embed the MiniEVM or prover into those systems.
+
+The key research object is not a competition called “tests vs proofs.” It is the disagreement matrix. A proof-valid, specification-wrong case is as important as a test-green, constraint-invalid case.
+
 ## Dependencies
 
 E3 consumes, without silently modifying:
