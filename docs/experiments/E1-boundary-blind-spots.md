@@ -6,6 +6,39 @@ Can a defect at a semantic boundary survive strong local testing evidence on bot
 
 This experiment uses a deliberately small EVM implementation as a controlled specimen. The objective is not to prove anything about all software systems. It is to create a corpus where the causal defect, boundary, trigger, and expected behavior are known before measurement.
 
+## Relationship to our projects
+
+E1 is a **controlled calibration companion to P-038** in the OwnAudit / Own.NET research line. It is not a replacement for P-038 and must not be merged into the same denominator.
+
+P-038 supplies the externally grounded side of the question: real software seams, real defect provenance, matched case/control structure, and composition witnesses evaluated under preregistered rules. E1 supplies something P-038 cannot obtain cleanly from mined software: exact ground truth for the injected defect, exact semantic seam, exact trigger, and systematic control over defect class.
+
+The intended relationship is:
+
+```text
+P-038 real-world evidence
+        │
+        │ external realism
+        ▼
+boundary-blindness claim
+        ▲
+        │ causal calibration
+        │
+E1 controlled EVM corpus
+```
+
+E1 also supports the **Blind Spot Miner / leakmine** direction. A mined GitHub corpus is valuable for external validity but often leaves causal region, defect intent, boundary identity, and negative examples partially ambiguous. E1 can provide a synthetic control corpus with known labels for calibrating classification and detection logic before applying it to mined repositories.
+
+Of particular interest is the P-038 failure mode already observed in Own.NET: a defect implemented by **absence** rather than an incorrect executed branch can be locally well-covered and mutation-clean because there may be nothing at the causal point for an ordinary mutation operator to mutate. E1's `missing semantic case` class exists specifically to reproduce and vary that mechanism under controlled conditions.
+
+Project-level use is therefore:
+
+- **OwnAudit / P-038:** mechanism calibration and controlled falsification of boundary-blindness claims;
+- **Own.NET:** source of small controlled analogues of real composition defects, not production code or a dependency;
+- **Blind Spot Miner / leakmine:** labeled calibration corpus for seam/defect classification and mutation-representability analysis;
+- **later E3 work:** frozen defect/evidence input for comparing testing assurance with proof constraints.
+
+No positive E1 result may be cited as evidence of prevalence in production software. No negative E1 result may invalidate P-038 by itself. The two experiments answer different parts of the same research question.
+
 ## Why this repository
 
 The EVM has compact but non-trivial boundaries: stack ↔ opcode semantics, caller ↔ callee context, memory ↔ return data, writable ↔ static execution, storage ↔ account context, normal ↔ exceptional termination. Those boundaries are rich enough to create realistic semantic defects without requiring a production-sized codebase.
