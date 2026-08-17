@@ -133,9 +133,24 @@ Frame {
 FrameResult { halt: NORMAL | EXCEPTIONAL, returndata: bytes }
 
 World: address -> { code: bytes, storage: uint256 -> uint256 }
+
+TxContext {
+  to      address | ABSENT
+  from    address | ABSENT
+}
+
+CallOperands_CALL          { gas, address, value, argsOffset, argsSize, retOffset, retSize }
+CallOperands_STATICCALL    { gas, address,        argsOffset, argsSize, retOffset, retSize }
+CallOperands_DELEGATECALL  { gas, address,        argsOffset, argsSize, retOffset, retSize }
 ```
 
 `REVERT` is `EXCEPTIONAL` *with* returndata; every other exceptional halt carries none.
+
+**Field order is normative.** The order in which fields are written above is the order §8.2.1
+enumerates them in. `TxContext` and the three operand tuples are declared here for exactly
+that reason: §8.2.1 orders composite records "by the field order §2 declares", and an earlier
+draft named records §2 did not define. The operand tuples' field order is also their pop
+order (`SEM-CALL-1..3`), so the two never diverge.
 
 ---
 
@@ -555,7 +570,8 @@ Step 0 §3.1.3 rule 2 adds one test per branch left uncovered by rule 1. Branche
 until the clean implementation does, so their IDs cannot be enumerated here. Frozen instead:
 
 - ID form `LT-BR-<unit>-<nnn>`, allocated in ascending order of source position;
-- the input for each is the first value in the **total** order of §8.2.1 that reaches the branch;
+- the input for each is found by the terminating search procedure of §8.2.2 over the total
+  order of §8.2.1;
 - they may assert **only** postconditions surviving §5.1, never one the projection excluded.
 
 #### 8.2.1 Total input enumeration
@@ -595,30 +611,50 @@ enumeration that stopped at "account presence" would have left "the first frozen
 undefined for exactly those branches, and the word *total* would have been doing more work
 than the table under it.
 
-**And the stop rule, which matters more than the order.** If a branch is reachable but no
-value in the frozen domain reaches it:
+#### 8.2.2 The branch-search procedure
+
+The enumeration above orders the domains; it does not by itself say how a witness is found,
+and the earlier stop rule made that gap worse by keying on whether a branch was *reachable*.
+Deciding reachability of an arbitrary program branch is not a task to hand an experimenter
+mid-qualification — it is the halting problem wearing a lab coat. The procedure below never
+asks the question:
 
 ```text
-record  UNREACHABLE_UNDER_FROZEN_DOMAIN  naming the branch,
-halt the qualification,
-STOP E1-v1, preserve the record,
-and continue only as a NEW E1-v2 preregistration.
+for each uncovered branch arm, in frozen source order:
+
+    enumerate candidates from the §8.2.1 stream for that unit's
+    input record, in the frozen product order, up to budget B
+
+    first candidate that covers the arm
+        -> emit LT-BR-<unit>-<nnn>, inputs recorded verbatim
+
+    no candidate covers it within B
+        -> NO_FROZEN_BRANCH_WITNESS, naming the arm and B
+        -> stop E1-v1, preserve the record
+        -> continue only as a new E1-v2 preregistration
+
+B = 4096 candidates per arm, frozen here.
 ```
 
-An earlier wording said "amend the preregistration before any measurement", which was
-impossible on its face. This condition can only be discovered at step 6 of §10, and step 3
-has already demonstrated coverage and mutation on Baseline A — so a measured run has
-happened, and Step 0's freeze has bitten. E1 does not implement time travel. The strict
-reading is also the honest one: **the Baseline A measurement is the moment the freeze becomes
-final**, exactly as Step 0 §0 promises, and a domain gap discovered afterwards is a v1 result
-to be preserved, not a document to be quietly edited. Redefining "measured run" to mean the
-first injected-specimen measurement would weaken Step 0's freeze contract retroactively for
-no gain, and is rejected.
+This terminates unconditionally: every arm either gets a witness from a frozen, ordered,
+finite prefix, or produces a named stop. Whether the arm was *truly* unreachable or merely
+unreached within `B` is not decided, and does not need to be — either way E1-v1 halts and the
+result is preserved. `NO_FROZEN_BRANCH_WITNESS` supersedes the earlier
+`UNREACHABLE_UNDER_FROZEN_DOMAIN`, which claimed a reachability verdict the procedure could
+not deliver.
+
+**Why the stop is a stop, and not an amendment.** This condition can only surface at step 6 of
+§10, and step 3 has already demonstrated coverage and mutation on Baseline A — so a measured
+run has happened and Step 0's freeze has bitten. The strict reading is also the honest one:
+**the Baseline A measurement is the moment the freeze becomes final**, exactly as Step 0 §0
+promises, and a witness gap found afterwards is a v1 result to preserve, not a document to
+edit. Redefining "measured run" as the first injected-specimen measurement would weaken
+Step 0's freeze contract retroactively for no gain, and is rejected.
 
 A hand-written fixture invented at the keyboard to close such a gap is prohibited outright.
-Without this rule the enumeration is deterministic only until the first `if (frame.static)`,
-and a single improvised fixture would silently convert the frozen plan back into an authored
-one.
+Without this procedure the enumeration is deterministic only until the first
+`if (frame.static)`, and a single improvised fixture would silently convert the frozen plan
+back into an authored one.
 
 Two digests, therefore:
 
@@ -731,8 +767,10 @@ not yet exist. Branch completion has the same problem one step further on.
 Superseding §9 steps 3–7 (Step 0 §9 steps 1–2 stand):
 
 ```text
-3.  Baseline A          level-A units; green on the 49-case level-A oracle slice;
-                        harness, coverage, mutation and manifest replay demonstrated.
+3.  Baseline A          write the M0 protocol manifest FIRST (Step 0 §8), then
+                        level-A units; green on the 49-case level-A oracle slice;
+                        harness, coverage, mutation and manifest replay
+                        demonstrated. This measurement makes the freeze final.
 
 4.  core local tests    all 213 case IDs written from §8. Level-B ones fail at this
                         point, which is expected and recorded — the units do not exist.
@@ -749,18 +787,21 @@ Superseding §9 steps 3–7 (Step 0 §9 steps 1–2 stand):
                         in-subset cases less the 6 witnesses); all 213 core tests
                         green.
 
-6.  qualification       enumerate LT-BR-* from the clean source by §8.2/§8.2.1; freeze
+6.  qualification       enumerate LT-BR-* from the clean source by §8.2.2; freeze
                         both final domains and run the §9.1 set-difference check;
                         record test_domain_digest and c2_control_test_set_digest;
                         run the clean coverage and mutation qualification to the
                         Step 0 §3.3 thresholds with NoCoverage == 0; confirm W1-W6
-                        all green (§4.1 arm 1). An UNREACHABLE_UNDER_FROZEN_DOMAIN
-                        finding here stops E1-v1 (§8.2.1).
+                        all green (§4.1 arm 1). Append the M1 clean-baseline
+                        record (Step 0 §8). A NO_FROZEN_BRANCH_WITNESS finding
+                        here stops E1-v1 (§8.2.2).
 
 7.  proxy               gated on the Step 0 §5.1.1 circularity check, then
                         e1-static-test-proxy/v0.
 
-8.  injections          catalog Step 0 §6, both revisions measured.
+8.  injections          catalog Step 0 §6, both revisions measured. Append an M2
+                        specimen record (Step 0 §8) BEFORE each injected
+                        measurement.
 ```
 
 The final domain digest is fixed at step 6 — after the clean Baseline B and **before any

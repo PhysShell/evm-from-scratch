@@ -964,23 +964,54 @@ shared bool the record could not say whether condition 3 or condition 6 had fire
 
 ---
 
-## 8. Freeze manifest
+## 8. Freeze manifest — staged and append-only
 
-Before the first measured run, one machine-readable manifest records: the resolved oracle
-case-index list (§1.4), the pinned tool versions (§2), the complete normative semantics (§3.1.1), the
-declared local test boundary and observation projection (§3.1.2), the **frozen local-test
-plan** (§3.1.3),
-**both** test domains' test-ID lists and digests — `calibration_local_test_set_digest` and
-`c2_control_test_set_digest` (§3.2.1, §3.2.2) — the
-`seam_adjacent_region` and the `causal_region` per seam (§3.2, §3.3.1), the StrykerJS
-operator catalog as used (§6.2), the enumeration budget (§6.2), the proxy version id (§5.1),
-and the baseline revision sha.
+An earlier version of this section asked for one manifest, before the first measured run,
+carrying both final test-domain digests, the source regions, the baseline revision sha and
+every defect's `fault_patch`. That is not constructible. The first measured run is the
+Baseline A qualification (Step 2 §10 step 3), and at that moment the realised `LT-BR-*` set
+does not exist — it is enumerated from the clean Baseline B at step 6 — while `fault_patch`
+describes injections that come later still. The demand was for a document to contain values
+that its own deadline preceded.
 
-Per injected defect, the manifest carries the fields already specified by the E1 document —
-`id`, `class`, `semantic_seam`, `baseline_revision`, `fault_patch`, `expected_trigger`,
-`expected_semantic_difference` — plus `boundary_field`, the `assigned_witness` (§4.1), and
-the §6.2 representability classification. It carries **no** post-hoc claim about which
-technique did or did not detect the defect.
+The resolution is **not** to soften the freeze. It is to stage the manifest and make it
+append-only: the *rules* freeze at the first measurement exactly as §0 promises, and the
+*values* those rules produce are appended later, by a procedure that was already frozen.
+
+```text
+M0  protocol manifest        written BEFORE Baseline A (Step 2 §10 step 3)
+      Step 0 and Step 2 document revisions (git sha of each)
+      resolved oracle case-index lists, level A and level B      (§1.4)
+      pinned toolchain versions                                  (§2)
+      the 213 core case IDs and plan_core_digest                 (Step 2 §8)
+      c2_control_core_digest                                     (Step 2 §9)
+      the observation projection, case rule, input enumeration
+        and branch-search procedure, by reference and revision
+      the defect and control catalog                             (§6)
+      the proxy version id                                       (§5.1)
+
+M1  clean-baseline record    appended BEFORE qualification (Step 2 §10 step 6)
+      the exact clean Baseline B revision sha
+      seam_adjacent_region and causal_region per seam            (§3.2, §3.3.1)
+      the realised LT-BR-* list
+      final_calibration_domain and final_c2_domain, with
+        test_domain_digest and c2_control_test_set_digest        (Step 2 §9.1)
+      the StrykerJS operator catalog as used and the enumeration
+        budget                                                   (§6.2)
+
+M2  specimen record          appended BEFORE each injected measurement
+      the exact injected revision sha
+      id, class, semantic_seam, boundary_field, assigned_witness (§4.1)
+      fault_patch, expected_trigger, expected_semantic_difference
+      the §6.2 representability classification
+```
+
+**Append-only is the load-bearing word.** An earlier stage is never rewritten, and a later
+stage may not contradict one. If M1 or M2 cannot be written as the frozen rules require —
+a region that cannot be delimited, a branch with no frozen witness — that is a stop
+condition under Step 2 §8.2.2, not a licence to revise M0.
+
+No stage carries a post-hoc claim about which technique did or did not detect a defect.
 
 ---
 
