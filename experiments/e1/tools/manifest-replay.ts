@@ -34,7 +34,10 @@ interface M0 {
   };
 }
 
-const m0: M0 = JSON.parse(readFileSync(join(E1, 'manifest', 'M0-protocol.json'), 'utf8'));
+// Overridable so E1-v1's stopped manifest stays replayable for audit.
+const MANIFEST = process.env['E1_MANIFEST'] ?? 'M0-v2-protocol.json';
+const m0: M0 = JSON.parse(readFileSync(join(E1, 'manifest', MANIFEST), 'utf8'));
+console.log(`manifest: ${MANIFEST}\n`);
 
 const failures: string[] = [];
 function check(label: string, actual: unknown, expected: unknown): void {
