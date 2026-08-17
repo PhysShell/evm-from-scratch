@@ -112,20 +112,39 @@ again rather than trusted to Git's grasp of our intentions.
 
 ```text
 1.  M0-v3 may exist only on a commit that is a DESCENDANT of freeze_merge_sha.
-2.  M0-v3 MUST record both freeze_merge_sha and freeze_base_sha.
-3.  Every measured run MUST be taken on a descendant of freeze_merge_sha, and
-    MUST record its own target_revision_sha per Step 0 §8.
+
+2.  M0-v3 MUST declare freeze_merge_sha, freeze_base_sha and freeze_path.
+    Replay checks the DECLARED base and path against frozen literals held in
+    the tool, and evaluates the §3.1 predicate using the LITERALS — never the
+    values the manifest supplies.
+
+3.  The measured target is the revision actually checked out. Replay derives
+    it as `git rev-parse HEAD`; it is NOT read from M0-v3. The measurement
+    record — not the manifest — writes target_revision_sha down afterwards.
+
 4.  Manifest replay MUST verify the §3.1 identity predicate (a)-(e) AND the
-    ordering:
-        git merge-base --is-ancestor <freeze_merge_sha> <target_revision_sha>
+    ordering `git merge-base --is-ancestor <freeze_merge_sha> <HEAD>`.
     A replay that cannot establish every clause fails, and the run is not
     admissible.
 ```
 
+**Why rule 2 says "literals, never the manifest's values."** A first implementation of rule 4
+read `freeze_base_sha` and `freeze_path` *out of the manifest* and fed them to the predicate.
+That is self-certification a third time: a manifest naming its own base and its own path can
+satisfy a predicate parameterised by them. The base and path are constants of this
+preregistration, so they live in the checker; the manifest's declarations are *checked
+against* them and never used in their place.
+
+**Why rule 3 takes the target from `HEAD`.** `M0-v3` lives inside the very commit a run is
+measured on, so a `target_revision_sha` read from it is a sha describing the object that
+contains it. Step 0 §8 already says a recorded sha is the revision measured and never the
+commit that records it; deriving the target from the actual checkout is that rule made
+operational, and the measurement record is where the resulting sha is written down.
+
 Rule 4 is what distinguishes v3 from v2, and the identity half is what distinguishes it from
 the first draft of v3. v2's freeze condition was true or false about the world and nothing
 checked it; a check of ancestry alone would have accepted at least two shas that are not the
-freeze event. Both halves are verified by the same tool that already recomputes the digests
+freeze event. Every clause is verified by the same tool that already recomputes the digests
 and the oracle sets, so a violation surfaces as a failing replay rather than as a reviewer
 noticing where `main` happened to be pointing.
 
