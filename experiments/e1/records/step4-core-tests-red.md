@@ -9,23 +9,52 @@ without being edited, and that only means something if red and green are separat
 ## Result
 
 ```text
-frozen plan      213
-executed         213
-passed           166
-failed            47
-names match plan true
-attributable     true
+manifest          M0-v3-protocol.json
+frozen plan       213   (level A 166, level B 47, derived from Step 2 §3 + E1-v2/A1)
+executed          213
+passed            166
+failed             47
+names match plan  true
+each executed 1×  true
+attributable      true
+passed == level A true
+failed == level B true
 ```
 
-Verified by `tools/verify-plan.ts`, not by reading a summary line. The test titles are the
-case IDs, compared as a set against `M0-v3-protocol.json`:
+Verified by `tools/verify-plan.ts`, not by reading a summary line.
 
-- **no frozen ID went unexecuted** and **no executed test is outside the plan**;
-- the 166 passing are *exactly* the level-A set;
-- the 47 failing are *exactly* the level-B set.
+**The level split is derived, not asserted.** The tool reads the frozen Step 2 document and
+classifies each postcondition by the section its row appears in — §3.1 is level A, every
+other §3.x section is level B — then applies amendment `E1-v2/A1`, which moves `SEM-RUN-4` to
+level B. Case IDs map to postconditions by stripping the `LT-` prefix and the `/CASE` suffix.
+Nothing in that path is a list written by hand after seeing a result, and the Step 2 blob is
+itself pinned by sha in the manifest and checked by `manifest-replay`, so the derivation's
+input is verified upstream rather than trusted.
 
-Set equality is the claim, not the counts. Two errors that cancel would keep 166/47 intact
-while testing the wrong things.
+The tool also refuses to apply the amendment blindly: the manifest's declared amendment must
+equal a literal held in the tool, and `SEM-RUN-4` must actually be filed under level A in
+Step 2 for a move *from* level A to mean anything. If Step 2 were ever re-filed, the
+amendment would stop applying and the run would fail rather than silently double-count.
+
+### What an earlier version of this tool did not check
+
+It compared executed IDs against the frozen list, counted passes and failures, and checked
+attributability — but had no notion of which IDs are level A and which are level B. A
+**compensating swap**, one level-A case failing while one level-B case passed, would have
+left 166/47 and `names match plan` intact and been reported as correct. It also folded
+results into a map keyed by title, so a duplicated case ID collapsed into one entry.
+
+Both are now checked, and both were verified against synthetic reports built from this very
+run:
+
+| Injected fault | Result |
+|---|---|
+| `LT-SEM-CMP-2/EQUAL` flipped to fail, `LT-SEM-MEM-1` flipped to pass | **exit 1**, naming both by ID, though counts stayed 166/47 |
+| one case ID duplicated | **exit 1** — `each executed 1× false` |
+| one case marked `pending` | **exit 1** — a skipped case is not a result |
+
+The unmodified report exits 0. Set equality is the claim; the counts are a consequence of it,
+not evidence for it.
 
 ## Every failure is attributable
 
