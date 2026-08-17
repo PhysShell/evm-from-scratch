@@ -26,7 +26,7 @@ interface Case {
 const corpus: Case[] = JSON.parse(readFileSync(CORPUS_PATH, 'utf8'));
 // The active manifest. Overridable so E1-v1's stopped record stays replayable — v1 is
 // preserved, not deleted (Step 0 §9), and its manifest must remain readable for audit.
-const MANIFEST = process.env['E1_MANIFEST'] ?? 'M0-v2-protocol.json';
+const MANIFEST = process.env['E1_MANIFEST'] ?? 'M0-v3-protocol.json';
 const m0 = JSON.parse(
   readFileSync(join(__dirname, '..', 'manifest', MANIFEST), 'utf8'),
 ) as { oracle_case_indices: { level_a: number[] } };

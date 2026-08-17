@@ -39,7 +39,7 @@ interface M0 {
 }
 
 // Overridable so E1-v1's stopped manifest stays replayable for audit.
-const MANIFEST = process.env['E1_MANIFEST'] ?? 'M0-v2-protocol.json';
+const MANIFEST = process.env['E1_MANIFEST'] ?? 'M0-v3-protocol.json';
 const m0: M0 = JSON.parse(readFileSync(join(E1, 'manifest', MANIFEST), 'utf8'));
 console.log(`manifest: ${MANIFEST}\n`);
 
