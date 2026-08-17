@@ -1,0 +1,28 @@
+{
+  "name": "e1-minievm",
+  "version": "0.0.0",
+  "private": true,
+  "description": "E1 boundary blind-spot corpus \u2014 MiniEVM specimen. Laboratory code, never a dependency.",
+  "type": "commonjs",
+  "scripts": {
+    "build": "tsc --noEmit",
+    "test": "jest",
+    "oracle": "jest --testPathPatterns=oracle",
+    "coverage": "jest --coverage",
+    "mutation": "stryker run",
+    "replay": "ts-node tools/manifest-replay.ts"
+  },
+  "devDependencies": {
+    "@babel/core": "7.29.7",
+    "@jest/globals": "30.4.1",
+    "@stryker-mutator/core": "10.0.0",
+    "@stryker-mutator/jest-runner": "10.0.0",
+    "@stryker-mutator/typescript-checker": "10.0.0",
+    "@types/jest": "30.0.0",
+    "@types/node": "22.13.5",
+    "jest": "30.4.2",
+    "ts-jest": "29.4.12",
+    "ts-node": "10.9.2",
+    "typescript": "5.7.3"
+  }
+}

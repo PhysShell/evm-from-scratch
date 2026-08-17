@@ -45,6 +45,14 @@ The EVM has compact but non-trivial boundaries: stack ↔ opcode semantics, call
 
 ## Core design
 
+> **Frozen by [E1 Step 0 — preregistration](./E1-step0-preregistration.md).** The semantic
+> subset, defect and control catalog, baseline oracle, toolchain, local-evidence thresholds,
+> composition witnesses, mutation-representability rule and the carved-out P-038 §5.1
+> calibration slice are all fixed there, before any measured run. This document states the
+> design; that one states the commitments. The concrete semantics, the computed projection
+> and the frozen test plan derived from them are in
+> [E1 Step 2](./E1-step2-semantics-and-plan.md).
+
 Start from a correct baseline implementation for a frozen subset of semantics. Inject one defect at a time from a preregistered defect catalog. For every defect, collect:
 
 - affected semantic boundary;
