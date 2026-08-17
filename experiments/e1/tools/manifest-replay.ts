@@ -32,6 +32,11 @@ interface M0 {
     c2_control_core_digest: string;
     c2_control_assertion: string;
   };
+  /** E1-v3 §3. Absent in M0 and M0-v2, which predate the rule and stay replayable. */
+  freeze_merge_sha?: string;
+  freeze_base_sha?: string;
+  freeze_path?: string;
+  target_revision_sha?: string;
 }
 
 // Overridable so E1-v1's stopped manifest stays replayable for audit.
@@ -113,6 +118,54 @@ const lock = JSON.parse(readFileSync(join(E1, 'package-lock.json'), 'utf8')) as 
 };
 for (const [name, version] of Object.entries(m0.toolchain)) {
   check(`toolchain ${name}`, lock.packages[`node_modules/${name}`]?.version, version);
+}
+
+// 5. Freeze-event identity and ordering — E1-v3 §3.1(a)-(e) and §3.2 rule 4.
+//
+//    Ancestry alone is NOT sufficient and was the defect in v3's first draft: it proves the
+//    named sha precedes the measurement, not that it IS the merge that introduced the
+//    preregistration. The merge of PR #2 satisfies ancestry; so does this document's own PR
+//    head. Both are checked against here.
+function git(args: string[]): { ok: boolean; out: string } {
+  try {
+    return { ok: true, out: execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() };
+  } catch {
+    return { ok: false, out: '' };
+  }
+}
+
+if (m0.freeze_merge_sha) {
+  const freeze = m0.freeze_merge_sha;
+  const base = m0.freeze_base_sha ?? '';
+  const path = m0.freeze_path ?? 'docs/experiments/E1-v3-preregistration.md';
+  console.log(`\nfreeze event ${freeze.slice(0, 12)} — E1-v3 §3.1`);
+
+  // (a) exactly two parents
+  const parents = git(['rev-list', '--parents', '-n1', freeze]);
+  check('freeze (a) is a two-parent merge', parents.ok && parents.out.split(/\s+/).length === 3, true);
+
+  // (b) first parent is the reviewed base
+  check('freeze (b) first parent is freeze_base_sha', git(['rev-parse', `${freeze}^1`]).out, base);
+
+  // (c) the preregistration did NOT exist before the merge
+  check('freeze (c) path absent at ^1', git(['cat-file', '-e', `${freeze}^1:${path}`]).ok, false);
+
+  // (d) it was supplied by the merged side
+  check('freeze (d) path present at ^2', git(['cat-file', '-e', `${freeze}^2:${path}`]).ok, true);
+
+  // (e) the content main carries is the content that was merged
+  const merged = git(['rev-parse', `${freeze}^2:${path}`]).out;
+  const landed = git(['rev-parse', `${freeze}:${path}`]).out;
+  check('freeze (e) merged blob is the landed blob', landed !== '' && landed === merged, true);
+
+  // ordering: the measurement follows the real freeze
+  const target = m0.target_revision_sha ?? '';
+  const ordered = /^[0-9a-f]{40}$/.test(target)
+    ? git(['merge-base', '--is-ancestor', freeze, target]).ok
+    : false;
+  check('freeze ordering: target is a descendant of the freeze', ordered, true);
+} else {
+  console.log('\nfreeze event: not declared by this manifest (M0 / M0-v2 predate E1-v3 §3)');
 }
 
 console.log(

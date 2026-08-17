@@ -63,31 +63,75 @@ between them would be worse than the defect being repaired.
 
 This is the only thing v3 adds.
 
-### 3.1 Definition
+### 3.1 Definition — identity, not merely ancestry
+
+An earlier draft of this section defined the freeze event as *"the merge commit that brings
+this document into `main`"* and had replay check only
 
 ```text
-freeze_merge_sha := the merge commit that brings this document into `main`
+git merge-base --is-ancestor <freeze_merge_sha> <target_revision_sha>
 ```
 
-It is an object in the repository with a timestamp and two parents, not a sentence. Nothing
-about the run may be settled by a document asserting its own status.
+which proves something weaker than it appears to: that **the sha M0 names is an ancestor of
+the measured revision**. It does not prove that sha *is* the merge that introduced this
+document. `fbef84cd4a925345d3aa65c2e02d9d7502bea787` — the merge of PR #2 — would satisfy it,
+and so would this document's own PR head, which §3 explicitly says is not the freeze event.
+That is self-certification again, one layer down: the manifest asserts an identity and the
+tool checks a property.
+
+The event is therefore pinned by an identity predicate over the commit graph:
+
+```text
+freeze_base_sha := fbef84cd4a925345d3aa65c2e02d9d7502bea787
+                   the reviewed `main` this preregistration is opened from
+
+FREEZE_PATH     := docs/experiments/E1-v3-preregistration.md
+
+freeze_merge_sha := the unique commit satisfying ALL of:
+
+  (a)  it has exactly two parents
+  (b)  freeze_merge_sha^1 == freeze_base_sha
+  (c)  FREEZE_PATH is ABSENT at freeze_merge_sha^1
+  (d)  FREEZE_PATH is PRESENT at freeze_merge_sha^2
+  (e)  blob(freeze_merge_sha:FREEZE_PATH)
+         == blob(freeze_merge_sha^2:FREEZE_PATH)
+```
+
+(b) fixes the merge to the reviewed base, so an unrelated later merge cannot stand in.
+(c) and (d) establish that this document arrived *through* that merge rather than existing
+before it. (e) closes the gap between "the merged side had a file at this path" and "the file
+`main` now carries is the one that was merged" — a conflict resolution could otherwise
+substitute different content.
+
+**`freeze_base_sha` is deliberately a fixed literal.** If `main` moves before PR #3 is
+merged, (b) stops holding and the freeze fails rather than silently re-anchoring. That is the
+intended behaviour: the reviewed merge context would have changed, and it should be looked at
+again rather than trusted to Git's grasp of our intentions.
 
 ### 3.2 Binding rules
 
 ```text
 1.  M0-v3 may exist only on a commit that is a DESCENDANT of freeze_merge_sha.
-2.  M0-v3 MUST record freeze_merge_sha in a `freeze_merge_sha` field.
+2.  M0-v3 MUST record both freeze_merge_sha and freeze_base_sha.
 3.  Every measured run MUST be taken on a descendant of freeze_merge_sha, and
     MUST record its own target_revision_sha per Step 0 §8.
-4.  Manifest replay MUST verify rules 1-3 mechanically:
+4.  Manifest replay MUST verify the §3.1 identity predicate (a)-(e) AND the
+    ordering:
         git merge-base --is-ancestor <freeze_merge_sha> <target_revision_sha>
-    A replay that cannot establish this fails, and the run is not admissible.
+    A replay that cannot establish every clause fails, and the run is not
+    admissible.
 ```
 
-Rule 4 is what distinguishes v3 from v2. v2's freeze condition was true or false about the
-world and nothing checked it; v3's is checked by the same tool that already recomputes the
-digests and the oracle sets, so a violation surfaces the way every other violation in this
-experiment surfaces — as a failing replay, not as a reviewer's good eyesight.
+Rule 4 is what distinguishes v3 from v2, and the identity half is what distinguishes it from
+the first draft of v3. v2's freeze condition was true or false about the world and nothing
+checked it; a check of ancestry alone would have accepted at least two shas that are not the
+freeze event. Both halves are verified by the same tool that already recomputes the digests
+and the oracle sets, so a violation surfaces as a failing replay rather than as a reviewer
+noticing where `main` happened to be pointing.
+
+Manifests without a `freeze_merge_sha` field — `M0` and `M0-v2` — are not subject to this
+rule. They predate it, their versions are stopped, and they stay replayable for audit as
+Step 0 §9 requires.
 
 ### 3.3 What the freeze fixes, and when
 
