@@ -53,3 +53,26 @@ export function dupIndex(op: number): number {
 export function swapIndex(op: number): number {
   return op - SWAP1 + 1;
 }
+
+// ---------------------------------------------------------------------------
+// Level B — Step 0 §1.2. Added at Step 2 §10 step 5.
+//
+// `test/core/opcodes-b.ts` keeps its own copy and is deliberately NOT deleted: removing it
+// would mean editing frozen test imports, and the red -> green transition has to be a
+// transformation of production code alone.
+// ---------------------------------------------------------------------------
+export const RETURNDATASIZE = 0x3d;
+export const RETURNDATACOPY = 0x3e;
+export const ADDRESS = 0x30;
+export const CALLER = 0x33;
+export const MLOAD = 0x51;
+export const MSTORE = 0x52;
+export const SLOAD = 0x54;
+export const SSTORE = 0x55;
+export const MSIZE = 0x59;
+export const GAS = 0x5a;
+export const CALL = 0xf1;
+export const DELEGATECALL = 0xf4;
+export const STATICCALL = 0xfa;
+export const RETURN = 0xf3;
+export const REVERT = 0xfd;

@@ -57,3 +57,21 @@ export class ExceptionalHalt extends Error {
     this.name = 'ExceptionalHalt';
   }
 }
+
+/** Step 2 §2 — `World`. Owned state, not a substituted collaborator (§1.3). */
+export interface Account {
+  code: Uint8Array;
+  storage: Map<bigint, bigint>;
+}
+export type World = Map<Address, Account>;
+
+/** Step 2 §2 — `TxContext`. Field order is normative (§8.2.1). */
+export interface TxContext {
+  to?: Address;
+  from?: Address;
+}
+
+/** Owned memory: a mutable holder, so its after-state is the unit's observable output. */
+export interface Memory {
+  bytes: Uint8Array;
+}
