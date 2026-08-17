@@ -574,42 +574,68 @@ until the clean implementation does, so their IDs cannot be enumerated here. Fro
   order of §8.2.1;
 - they may assert **only** postconditions surviving §5.1, never one the projection excluded.
 
-#### 8.2.1 Total input enumeration
+#### 8.2.1 The canonical candidate generator
 
-§8.1 orders numbers, pairs, addresses, byte strings and stack depths — but a clean
-implementation will branch on `frame.static`, on `FrameResult.halt`, on the call kind, on
-whether an account exists, and on combinations of those. For such predicates "the first value
-in §8.1 order" names nothing, and author choice would walk straight back in at step 6 of §10,
-which is precisely what `LT-BR-*` exists to prevent. The order is therefore total over every
-domain the frozen model contains:
+§8.1 orders inputs for the 213 *postcondition* tests and continues to do so. It cannot serve
+branch search: it leaves `uint256` an unbounded sequence, `byte string` a description
+("shortest satisfying the condition") and `stack depth` a predicate, none of which two
+independent implementers would turn into the same first 4096 candidates. Since §8.2.2's
+outcome — witness found, or E1-v1 stopped — depends on exactly that prefix, the generator is
+a **decision-rule input, not an implementation detail**, and must be canonical.
+
+It is therefore specified as **finite representative domains plus a fair order**. Both halves
+are needed: finite domains make the stream terminate; the fair order makes every field vary
+early, which a plain lexicographic product does not.
+
+**Primitive domains**, each finite and ordered:
 
 ```text
-bool                    false, true
-FrameResult.halt        NORMAL, EXCEPTIONAL
-call kind               CALL, STATICCALL, DELEGATECALL
-address                 0x…0aaa, 0x…0c42, 0x…0dad, zero address   (§8.1 rule 3, then zero)
-account presence        absent, present-with-empty-code, present-with-non-empty-code
-storage slot            account absent; account present & slot never written;
-                        account present & slot written zero;
-                        account present & slot written non-zero
-tx.to                   absent, present
-tx.from                 absent, present
-uint256                 §8.1 rule 1
-byte string             §8.1 rule 4
-stack depth             §8.1 rule 5
-
-records (Frame, FrameResult, TxContext, World, operand tuples)
-                        the Cartesian product of their field domains,
-                        enumerated lexicographically by the field order in
-                        which §2 declares them
+bool                    false, true                                        (2)
+halt                    NORMAL, EXCEPTIONAL                                (2)
+call kind               CALL, STATICCALL, DELEGATECALL                     (3)
+address                 ZERO, 0x…0aaa, 0x…0c42, 0x…0dad                    (4)
+address | ABSENT        ABSENT, ZERO, 0x…0aaa, 0x…0c42, 0x…0dad            (5)
+uint256                 0, 1, 2, 2²⁵⁶−1, 2²⁵⁵, 3                           (6)
+                        — the §8.1 rule-1 order, truncated to six
+bytes                   empty, 0x42, 0x42×32, 0x42×33                      (4)
+                        — empty, short, exactly one word, over one word
+stack (uint256[])       depth ∈ {0, 1, 2, 3, 17, 1024}, elements being the
+                        first `depth` values of the uint256 domain above,
+                        cycling                                            (6)
+                        — 17 and 1024 are present so DUP16/SWAP16 and the
+                          depth limit are reachable
+World                   W0 no accounts
+                        W1 0x…0aaa, empty code, no slots
+                        W2 0x…0aaa, code 0x42, no slots
+                        W3 0x…0aaa, code 0x42, slot 0 written zero
+                        W4 0x…0aaa, code 0x42, slot 0 written 0x42
+                        W5 0x…0aaa and 0x…0c42, both code 0x42,
+                           0x…0c42 slot 0 written 0x42                     (6)
 ```
 
-`TxContext` and `World` are in that list deliberately. `U-ENTRY` branches on whether `tx.to`
-and `tx.from` are present (`SEM-ROOT-2/3`), and a first implementation writing
-`account?.storage.get(slot) ?? 0n` branches on the storage-slot states above — so an
-enumeration that stopped at "account presence" would have left "the first frozen input"
-undefined for exactly those branches, and the word *total* would have been doing more work
-than the table under it.
+`Frame.memory` and `Frame.returndata` draw from `bytes`; `Frame.pc` from `uint256`;
+`TxContext.to` and `.from` from `address | ABSENT`, which is one domain rather than a
+separate "presence" flag and an address.
+
+**Record order.** A record's candidates are the product of its fields' domains, taken in the
+field order §2 declares. They are emitted in order of increasing **index sum** — the sum of
+each field's index into its own domain — with ties broken lexicographically by field order:
+
+```text
+sum 0   all fields at index 0
+sum 1   exactly one field at index 1, others at 0     (one candidate per field)
+sum 2   ...
+```
+
+A plain lexicographic odometer would have been useless here. `Frame` has nine fields and
+about 295 000 combinations; under most-significant-first ordering the first 4096 candidates
+all share the same `code`, `pc` and `stack`, so a branch on non-empty `code` would never be
+reached inside the budget and would be reported as `NO_FROZEN_BRANCH_WITNESS` — killing
+E1-v1 over an artefact of enumeration order. Index-sum ordering varies every field within the
+first ten candidates.
+
+Every domain above is finite, so the stream is finite. A stream exhausted before the budget
+is reached is treated exactly as budget exhaustion (§8.2.2).
 
 #### 8.2.2 The branch-search procedure
 
@@ -787,14 +813,22 @@ Superseding §9 steps 3–7 (Step 0 §9 steps 1–2 stand):
                         in-subset cases less the 6 witnesses); all 213 core tests
                         green.
 
-6.  qualification       enumerate LT-BR-* from the clean source by §8.2.2; freeze
-                        both final domains and run the §9.1 set-difference check;
-                        record test_domain_digest and c2_control_test_set_digest;
-                        run the clean coverage and mutation qualification to the
-                        Step 0 §3.3 thresholds with NoCoverage == 0; confirm W1-W6
-                        all green (§4.1 arm 1). Append the M1 clean-baseline
-                        record (Step 0 §8). A NO_FROZEN_BRANCH_WITNESS finding
-                        here stops E1-v1 (§8.2.2).
+6a. domain realisation  a NON-ADJUDICATING DISCOVERY RUN. Run only the coverage
+                        needed to identify uncovered branch arms — its figures are
+                        discovery output and may never be cited as condition-3
+                        evidence or as any baseline-adequacy number. Generate
+                        LT-BR-* by the frozen search of §8.2.2. Freeze both final
+                        domains, run the §9.1 set-difference check, and settle the
+                        regions, operator catalog and budgets.
+                        Append the M1 clean-baseline record (Step 0 §8) — HERE,
+                        before any adjudicating figure exists.
+                        A NO_FROZEN_BRANCH_WITNESS finding stops E1-v1 (§8.2.2).
+
+6b. qualification       ONLY NOW produce the figures that can become §5.3
+                        condition-3 evidence: the clean coverage and mutation
+                        qualification to the Step 0 §3.3 thresholds with
+                        NoCoverage == 0, measured against the domain M1 already
+                        records; and confirm W1-W6 all green (§4.1 arm 1).
 
 7.  proxy               gated on the Step 0 §5.1.1 circularity check, then
                         e1-static-test-proxy/v0.
@@ -804,7 +838,22 @@ Superseding §9 steps 3–7 (Step 0 §9 steps 1–2 stand):
                         measurement.
 ```
 
-The final domain digest is fixed at step 6 — after the clean Baseline B and **before any
+The final domain digest is fixed at step 6a — after the clean Baseline B and **before any
 defect exists**. That ordering cannot tune anything to an outcome, because the
-branch-completion algorithm was frozen in §8.2 and no injected specimen exists yet to tune
+branch-completion algorithm was frozen in §8.2.2 and no injected specimen exists yet to tune
 towards.
+
+**Why 6a and 6b are separate steps.** An earlier draft appended M1 at the end of a single
+step 6, after the qualification figures had already been seen — so a record whose whole
+purpose is to fix the measurement's terms would have been written knowing its outcome. The
+split makes the ordering physical rather than promised: 6a settles the domain and commits it
+to M1; 6b measures against a domain it can no longer influence. Naming 6a's coverage a
+*non-adjudicating discovery run* is part of that: without the label, a number produced to
+find uncovered arms is one careless sentence away from being quoted as baseline adequacy.
+
+**Recorded SHAs mean the target commit, never the manifest commit.** If M1 and M2 are
+committed into this repository, appending them moves `HEAD`. `baseline_revision_sha` and
+`injected_revision_sha` therefore denote the commit the measurement *runs against* — the
+manifest record's parent target — and the qualification and every measured run must check out
+that recorded SHA explicitly. Otherwise the act of recording "the exact commit measured"
+would change it.

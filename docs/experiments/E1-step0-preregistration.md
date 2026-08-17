@@ -990,7 +990,9 @@ M0  protocol manifest        written BEFORE Baseline A (Step 2 §10 step 3)
       the defect and control catalog                             (§6)
       the proxy version id                                       (§5.1)
 
-M1  clean-baseline record    appended BEFORE qualification (Step 2 §10 step 6)
+M1  clean-baseline record    appended at the END of Step 2 §10 step 6a —
+                             after domain realisation, BEFORE the step-6b
+                             qualification produces any adjudicating figure
       the exact clean Baseline B revision sha
       seam_adjacent_region and causal_region per seam            (§3.2, §3.3.1)
       the realised LT-BR-* list
@@ -1010,6 +1012,19 @@ M2  specimen record          appended BEFORE each injected measurement
 stage may not contradict one. If M1 or M2 cannot be written as the frozen rules require —
 a region that cannot be delimited, a branch with no frozen witness — that is a stop
 condition under Step 2 §8.2.2, not a licence to revise M0.
+
+**M1 precedes the adjudicating figures, not merely the injections.** Step 2 §10 splits
+qualification into 6a (domain realisation, a non-adjudicating discovery run) and 6b (the
+figures that can become §5.3 condition-3 evidence). M1 is appended at the end of 6a. A record
+that fixes the terms of a measurement must not be written after its result is known, and an
+earlier draft of this section — "appended BEFORE qualification" against a single step 6 that
+ended in M1 — allowed exactly that.
+
+**A recorded SHA is the target commit, never the manifest commit.** Appending M1 or M2 into
+this repository moves `HEAD`, so `baseline_revision_sha` and `injected_revision_sha` denote
+the commit the measurement *runs against* — the record's parent target — and every measured
+run checks out that recorded SHA explicitly. Without this, the act of recording "the exact
+commit measured" would change it.
 
 No stage carries a post-hoc claim about which technique did or did not detect a defect.
 
