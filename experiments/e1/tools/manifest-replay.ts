@@ -32,6 +32,10 @@ interface M0 {
     c2_control_core_digest: string;
     c2_control_assertion: string;
   };
+  /** E1-v3 §3. Absent in M0 and M0-v2, which predate the rule and stay replayable. */
+  freeze_merge_sha?: string;
+  freeze_base_sha?: string;
+  freeze_path?: string;
 }
 
 // Overridable so E1-v1's stopped manifest stays replayable for audit.
@@ -113,6 +117,73 @@ const lock = JSON.parse(readFileSync(join(E1, 'package-lock.json'), 'utf8')) as 
 };
 for (const [name, version] of Object.entries(m0.toolchain)) {
   check(`toolchain ${name}`, lock.packages[`node_modules/${name}`]?.version, version);
+}
+
+// 5. Freeze-event identity and ordering — E1-v3 §3.1(a)-(e) and §3.2 rule 4.
+//
+//    Ancestry alone is NOT sufficient and was the defect in v3's first draft: it proves the
+//    named sha precedes the measurement, not that it IS the merge that introduced the
+//    preregistration. The merge of PR #2 satisfies ancestry; so does this document's own PR
+//    head. Both are checked against here.
+function git(args: string[]): { ok: boolean; out: string } {
+  try {
+    return { ok: true, out: execFileSync('git', args, { cwd: ROOT, encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim() };
+  } catch {
+    return { ok: false, out: '' };
+  }
+}
+
+/**
+ * Constants of the E1-v3 preregistration, held HERE and not read from the manifest.
+ *
+ * A first implementation took these out of M0 and fed them to the predicate, which is
+ * self-certification a third time over: a manifest naming its own base and its own path can
+ * satisfy a predicate parameterised by them. The manifest's declarations are checked
+ * against these literals; the predicate is evaluated with the literals.
+ */
+const FREEZE_BASE_SHA = 'fbef84cd4a925345d3aa65c2e02d9d7502bea787';
+const FREEZE_PATH = 'docs/experiments/E1-v3-preregistration.md';
+
+if (m0.freeze_merge_sha) {
+  const freeze = m0.freeze_merge_sha;
+  console.log(`\nfreeze event ${freeze.slice(0, 12)} — E1-v3 §3.1`);
+
+  // What the manifest DECLARES must equal the frozen literals...
+  check('manifest freeze_base_sha matches the frozen literal', m0.freeze_base_sha, FREEZE_BASE_SHA);
+  if (m0.freeze_path !== undefined) {
+    check('manifest freeze_path matches the frozen literal', m0.freeze_path, FREEZE_PATH);
+  }
+
+  // ...and the predicate is evaluated with the literals, never with those declarations.
+  const base = FREEZE_BASE_SHA;
+  const path = FREEZE_PATH;
+
+  // (a) exactly two parents
+  const parents = git(['rev-list', '--parents', '-n1', freeze]);
+  check('freeze (a) is a two-parent merge', parents.ok && parents.out.split(/\s+/).length === 3, true);
+
+  // (b) first parent is the reviewed base
+  check('freeze (b) first parent is the frozen base', git(['rev-parse', `${freeze}^1`]).out, base);
+
+  // (c) the preregistration did NOT exist before the merge
+  check('freeze (c) path absent at ^1', git(['cat-file', '-e', `${freeze}^1:${path}`]).ok, false);
+
+  // (d) it was supplied by the merged side
+  check('freeze (d) path present at ^2', git(['cat-file', '-e', `${freeze}^2:${path}`]).ok, true);
+
+  // (e) the content main carries is the content that was merged
+  const merged = git(['rev-parse', `${freeze}^2:${path}`]).out;
+  const landed = git(['rev-parse', `${freeze}:${path}`]).out;
+  check('freeze (e) merged blob is the landed blob', landed !== '' && landed === merged, true);
+
+  // Ordering. The measured target is the ACTUAL CHECKOUT, not a field in M0 — M0-v3 lives
+  // inside the commit being measured, so a target read from it would describe its own
+  // container. The measurement record writes the resulting sha down afterwards.
+  const target = git(['rev-parse', 'HEAD']).out;
+  console.log(`     measured target (HEAD) ${target.slice(0, 12)}`);
+  check('freeze ordering: HEAD is a descendant of the freeze', git(['merge-base', '--is-ancestor', freeze, target]).ok, true);
+} else {
+  console.log('\nfreeze event: not declared by this manifest (M0 / M0-v2 predate E1-v3 §3)');
 }
 
 console.log(

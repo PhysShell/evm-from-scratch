@@ -1,0 +1,215 @@
+# E1-v3 — preregistration
+
+**Status:** a **new** preregistration, opened because
+[E1-v2 stopped](./E1-v2-STOP.md) with `STOP_PROTOCOL_FREEZE_ORDER`. It is not an edit of any
+earlier document; v1 and v2 remain frozen, stopped and unmodified.
+
+**Freeze event:** the merge commit that brings *this document* into `main`. Not this
+document's own commit, and not any statement inside it. §3 defines the event precisely and
+makes it mechanically checkable, because v2 stopped exactly on the difference between
+declaring a freeze and having one.
+
+---
+
+## 1. Why v3 exists
+
+v2 said of itself *"Frozen on merge"*, and inherited Step 0 §9 step 1 says *"freeze — this
+document reviewed and merged"*. At the moment of the v2 Baseline A measurement, `main` stood
+at the roadmap commit `2ea7057` and carried none of the E1 preregistrations. The documents
+were committed before measurement — real provenance, preserved — but committed is not
+merged.
+
+Merging afterwards could not repair it: the measurement had already happened, and no ordering
+of commits places a later merge before an earlier measurement. So v2 stopped, and its history
+was merged into `main` at `fbef84cd4a925345d3aa65c2e02d9d7502bea787` for one purpose only —
+so that v3 could be opened from a `main` that actually carries the record, and so that v3's
+own freeze event can be a real merge commit preceding every v3 measurement.
+
+**v3 introduces no semantic change of any kind.** Its entire content is inheritance plus a
+freeze-event definition that can be checked rather than asserted.
+
+## 2. Inheritance
+
+E1-v3 adopts, unchanged and by reference, these documents at the blobs merged into `main`:
+
+```text
+c294d724ce50952db4642f9ef757a3f7a6bf33b6   E1-step0-preregistration.md
+586bb92f66d9c6c889a9c2266832264d526a87b4   E1-step2-semantics-and-plan.md
+a42fa76f702cfa45664198eea809464d87a7b35f   E1-v2-preregistration.md
+```
+
+- Step 0 and Step 2 supply the whole specification: the semantic subset, the observation
+  projection, the case rule, the candidate generator, the branch-search procedure, the
+  thresholds, the decision rule, the staged manifest, the catalog, and the sequence.
+- The v2 preregistration supplies **amendment `E1-v2/A1`** — `SEM-RUN-4` is a level-B
+  postcondition — which v3 carries forward verbatim, together with every consequence it
+  computed:
+
+```text
+postconditions      79      24 + 13 + 7 + 8 + 15 + 6 + 6
+surviving           58
+excluded            21
+core case IDs      213      level split 166 A / 47 B
+plan_core_digest         63b4d9f9e1b40a08d2bd3f862ce072fb036bc6401f4360823cc5bfc8d79aae02
+c2_control_core_digest   c4273493fd9c001687c9b745df3e1f900a64a3fe746c8d91142298dd3587a051
+oracle sets              49 level A / 71 level B in-subset / 6 witnesses / 65 level-B oracle
+```
+
+Inheriting by blob sha rather than by copying is deliberate and unchanged from v2's
+reasoning: duplicating the specification would create two texts to hold in step, and drift
+between them would be worse than the defect being repaired.
+
+## 3. The freeze event — defined so it can be checked
+
+This is the only thing v3 adds.
+
+### 3.1 Definition — identity, not merely ancestry
+
+An earlier draft of this section defined the freeze event as *"the merge commit that brings
+this document into `main`"* and had replay check only
+
+```text
+git merge-base --is-ancestor <freeze_merge_sha> <target_revision_sha>
+```
+
+which proves something weaker than it appears to: that **the sha M0 names is an ancestor of
+the measured revision**. It does not prove that sha *is* the merge that introduced this
+document. `fbef84cd4a925345d3aa65c2e02d9d7502bea787` — the merge of PR #2 — would satisfy it,
+and so would this document's own PR head, which §3 explicitly says is not the freeze event.
+That is self-certification again, one layer down: the manifest asserts an identity and the
+tool checks a property.
+
+The event is therefore pinned by an identity predicate over the commit graph:
+
+```text
+freeze_base_sha := fbef84cd4a925345d3aa65c2e02d9d7502bea787
+                   the reviewed `main` this preregistration is opened from
+
+FREEZE_PATH     := docs/experiments/E1-v3-preregistration.md
+
+freeze_merge_sha := the unique commit satisfying ALL of:
+
+  (a)  it has exactly two parents
+  (b)  freeze_merge_sha^1 == freeze_base_sha
+  (c)  FREEZE_PATH is ABSENT at freeze_merge_sha^1
+  (d)  FREEZE_PATH is PRESENT at freeze_merge_sha^2
+  (e)  blob(freeze_merge_sha:FREEZE_PATH)
+         == blob(freeze_merge_sha^2:FREEZE_PATH)
+```
+
+(b) fixes the merge to the reviewed base, so an unrelated later merge cannot stand in.
+(c) and (d) establish that this document arrived *through* that merge rather than existing
+before it. (e) closes the gap between "the merged side had a file at this path" and "the file
+`main` now carries is the one that was merged" — a conflict resolution could otherwise
+substitute different content.
+
+**`freeze_base_sha` is deliberately a fixed literal.** If `main` moves before PR #3 is
+merged, (b) stops holding and the freeze fails rather than silently re-anchoring. That is the
+intended behaviour: the reviewed merge context would have changed, and it should be looked at
+again rather than trusted to Git's grasp of our intentions.
+
+### 3.2 Binding rules
+
+```text
+1.  M0-v3 may exist only on a commit that is a DESCENDANT of freeze_merge_sha.
+
+2.  M0-v3 MUST declare freeze_merge_sha, freeze_base_sha and freeze_path.
+    Replay checks the DECLARED base and path against frozen literals held in
+    the tool, and evaluates the §3.1 predicate using the LITERALS — never the
+    values the manifest supplies.
+
+3.  The measured target is the revision actually checked out. Replay derives
+    it as `git rev-parse HEAD`; it is NOT read from M0-v3. The measurement
+    record — not the manifest — writes target_revision_sha down afterwards.
+
+4.  Manifest replay MUST verify the §3.1 identity predicate (a)-(e) AND the
+    ordering `git merge-base --is-ancestor <freeze_merge_sha> <HEAD>`.
+    A replay that cannot establish every clause fails, and the run is not
+    admissible.
+```
+
+**Why rule 2 says "literals, never the manifest's values."** A first implementation of rule 4
+read `freeze_base_sha` and `freeze_path` *out of the manifest* and fed them to the predicate.
+That is self-certification a third time: a manifest naming its own base and its own path can
+satisfy a predicate parameterised by them. The base and path are constants of this
+preregistration, so they live in the checker; the manifest's declarations are *checked
+against* them and never used in their place.
+
+**Why rule 3 takes the target from `HEAD`.** `M0-v3` lives inside the very commit a run is
+measured on, so a `target_revision_sha` read from it is a sha describing the object that
+contains it. Step 0 §8 already says a recorded sha is the revision measured and never the
+commit that records it; deriving the target from the actual checkout is that rule made
+operational, and the measurement record is where the resulting sha is written down.
+
+Rule 4 is what distinguishes v3 from v2, and the identity half is what distinguishes it from
+the first draft of v3. v2's freeze condition was true or false about the world and nothing
+checked it; a check of ancestry alone would have accepted at least two shas that are not the
+freeze event. Every clause is verified by the same tool that already recomputes the digests
+and the oracle sets, so a violation surfaces as a failing replay rather than as a reviewer
+noticing where `main` happened to be pointing.
+
+Manifests without a `freeze_merge_sha` field — `M0` and `M0-v2` — are not subject to this
+rule. They predate it, their versions are stopped, and they stay replayable for audit as
+Step 0 §9 requires.
+
+### 3.3 What the freeze fixes, and when
+
+Unchanged from Step 0 §0: nothing in the frozen documents may be revised after the **first
+measured run** of the artefact they govern. The freeze *event* (§3.1) establishes which
+documents are in force; the first measurement makes that set final. Both must happen, in that
+order, and under v1 and v2 respectively one of them did not.
+
+A revision required after the first v3 measurement produces `E1-v4`, by the same rule that
+produced v2 and v3.
+
+## 4. What carries over from earlier measurements
+
+**Carried as fact about the toolchain, not as evidence about the specimen:**
+
+- StrykerJS 10.0.0 performs genuine per-test analysis — 11.64 tests per mutant against a
+  50-test suite — discharging the P-038 §3.3 warning that Step 2 §2 had only inherited;
+- harness, coverage, mutation and manifest replay all function.
+
+**Redone under v3:** the Baseline A measurement, on a descendant of `freeze_merge_sha`
+against `M0-v3`. Earlier figures were taken before a valid freeze existed and stay attached
+to their own stopped versions.
+
+**Not redone:** the Baseline A implementation. It is correct under the inherited
+specification and is not touched. It has now been measured identically twice, and a third
+identical result will say nothing new about the code — only about the protocol under which it
+was taken, which is the whole point of v3.
+
+## 5. Sequence
+
+Step 2 §10 governs. Steps 1–2 are discharged by the inherited documents.
+
+```text
+0.  freeze          this document reviewed and merged into `main`.
+                    That merge commit is freeze_merge_sha.
+3.  M0-v3, then re-run the unchanged Baseline A on a descendant of it.
+                    THIS measurement makes the E1-v3 freeze final.
+4.  core local tests — all 213 case IDs; 166 level-A green, 47 level-B red
+5.  Baseline B, clean
+6a. domain realisation, M1
+6b. qualification
+7.  proxy
+8.  injections
+```
+
+## 6. Version chain, for the record
+
+```text
+E1-v1   STOP_SPECIFICATION_CONFLICT     Step 0 §1.1 vs Step 2 §3.1 over GAS
+                                        docs/experiments/E1-v1-STOP.md
+E1-v2   STOP_PROTOCOL_FREEZE_ORDER      declared freeze event never occurred
+                                        docs/experiments/E1-v2-STOP.md
+E1-v3   this document
+```
+
+Both stops are preserved, never deleted — Step 0 §9 and experiments README principle 4. And
+both are statements about the specification and its protocol. **Neither is a result about
+boundary blindness**, and neither may be cited as one: no specimen has been built, no seam
+exists, no defect has been injected, and no calibration figure has been produced. The
+distinction is the one P-038 §5.1 and Step 0 §6.1 both insist on, and it is worth repeating
+once per version precisely because a growing pile of stop records starts to look like a
+growing pile of negative findings, and is not.
