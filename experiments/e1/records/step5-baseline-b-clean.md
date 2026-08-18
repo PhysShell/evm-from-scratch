@@ -107,6 +107,18 @@ a frozen postcondition list, and a postcondition can be locally satisfiable by c
 a consequence the composition-level corpus pins down. The 213 are complete with respect to the
 plan, not with respect to every fact about the implementation.
 
+## Two of the 213 are weaker than their postconditions
+
+External review after this record was written found that `LT-SEM-CALL-5` is **vacuous** — its
+closing assertion compares a length against the constant the test just built it from — and
+that `LT-SEM-STO-4` performs no halt, so the one postcondition motivating the rollback
+amputation has no local witness. Both are frozen and stay unedited; see
+[`v3-review-findings.md`](./v3-review-findings.md) §2 for the verification and for what it
+does to the claim above.
+
+"213/213 green" stands and was always a count rather than a strength claim. It now overstates
+the suite by one unfalsifiable case, and by two against the postcondition list.
+
 ## Provenance
 
 ```text

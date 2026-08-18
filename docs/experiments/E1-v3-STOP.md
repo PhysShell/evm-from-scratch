@@ -44,8 +44,9 @@ either has empty code, so the loop is never entered, or all-`0x42` code, which r
 `default:` arm and halts exceptionally.
 
 The domain is finite and was enumerated in full, so this is **exhaustive, not a sampling
-result**: raising `B` cannot help, because the fourth candidate already exhausts the `code`
-domain. Every one of
+result**: raising `B` cannot help, because the `code` domain is exhausted at index-sum 3,
+which the enumeration reaches well inside the budget — the fourth and last `code` value first
+appears at candidate 210 of 4096. Every one of
 
 ```text
 STOP ADD SUB MUL DIV MOD LT GT EQ ISZERO POP JUMP JUMPI JUMPDEST PC
