@@ -10,6 +10,14 @@ frozen. They cannot be repaired without breaking the invariant that makes the ar
 evidence, so the only honest thing left is to write them down where anyone reading the
 Step 5 record will also read this one.
 
+**Revised after owner review, 2026-08-18.** The first draft of §2 got its own accounting
+wrong in two ways: it called `LT-SEM-CALL-5` vacuous when only its closing assertion is, and
+it counted `SEM-CALL-5` as one case when §3.3 gives it three; and it described `LT-SEM-STO-4`
+as a weak duplicate of `LT-SEM-STO-1` when the sharper fact is that frozen §3.2 assigns
+`SEM-STO-4` to `U-RUN` and the case exercises `U-STO`. §2.1, §2.2 and §2.4 are rewritten
+accordingly, and the superseded wording is named where it stood rather than quietly dropped.
+No production code and no frozen test was touched by that revision, or by this file at all.
+
 ---
 
 ## 1. Repaired
@@ -47,7 +55,7 @@ the implementation, and after an external tool pointed at it — converts a prer
 into an authored one. That is the same move Step 2 §8.2.2 forbids for branch fixtures, and it
 is forbidden here for the same reason.
 
-### 2.1 `LT-SEM-CALL-5` is vacuous
+### 2.1 `LT-SEM-CALL-5` witnesses extraction, not consumption — 3 case IDs
 
 ```ts
 const before = stack.length;                                  // 7 for CALL, 6 otherwise
@@ -56,20 +64,43 @@ expect(ops['gas']).toBe(MAX_UINT256);
 expect(before - (kind === 'CALL' ? 7 : 6)).toBe(0);            // always 0, by construction
 ```
 
-The final assertion compares a length the test itself just built against the constant it
-built it from. It holds for every possible implementation of `popOperands` and cannot fail.
-Worse, the operand stack is passed as a spread copy, so whether `popOperands` consumed
+**This is three case IDs, not one.** §3.3 gives `SEM-CALL-5` the case set *all three kinds*,
+and the §8 plan lists `LT-SEM-CALL-5/CALL`, `/DELEGATECALL` and `/STATICCALL` accordingly. The
+test is an `it.each(KINDS)`, so the defect below is present in each of the three.
+
+**The case is not vacuous, and an earlier draft of this record wrongly called it that.** The
+first assertion is falsifiable: an implementation that read `gas` from the wrong stack position
+fails it, and that is a real property of `popOperands`.
+
+The *final* assertion is the tautological one. It compares a length the test itself just built
+against the constant it built it from, so it holds for every possible implementation and cannot
+fail. And because the operand stack is passed as a spread copy, whether `popOperands` consumed
 anything is never observed at all.
 
-**What survives:** `ops['gas'] === MAX_UINT256`. `SEM-CALL-5` says the `gas` operand is
-consumed and otherwise ignored; the case establishes that it is *read from the right
-position*, and establishes nothing about consumption.
+**What the three cases establish:** `gas` is extracted from the right position.
+**What they do not establish:** that it is *consumed* — which is the word `SEM-CALL-5` uses.
 
-### 2.2 `LT-SEM-STO-4` does not exercise the halt it is named for
+**The sharpest form of the problem is in the projection, not the test.** §5.1 admits
+`SEM-CALL-1..8` as surviving with an explicit reason:
+
+> operand arity, pop order and consumption are decidable from `U-CALL`'s own stack before and
+> after, with no reference to the double's behaviour.
+
+The before-and-after of `U-CALL`'s own stack is exactly the observation the spread copy throws
+away. The case forgoes the very observation that justified admitting its postcondition to the
+surviving set.
+
+### 2.2 `LT-SEM-STO-4` realises no `U-RUN` postcondition — a projection/realisation mismatch
 
 `SEM-STO-4` is the deliberate amputation of storage rollback: *an exceptional halt does not
 undo storage writes already performed in that frame.* The case performs one `sstore` and
 asserts the value landed. No halt occurs.
+
+**And the unit is wrong, which is the more serious half.** Frozen §3.2 assigns `SEM-STO-4` to
+**`U-RUN`** — it is a statement about what a frame's interpreter loop does when it halts
+exceptionally, which is why §3.2 places it there and not with `SEM-STO-1..3`. The case sits in
+the `U-STO` block and calls `sto().sstore()` only. It therefore does not exercise the wrong
+*scenario* of the right unit; it exercises a different unit altogether.
 
 ```ts
 const w = world();
@@ -79,6 +110,16 @@ expect(w.get(AAA)?.storage.get(0n)).toBe(0x42n);
 
 As written it is a duplicate of `LT-SEM-STO-1`. The postcondition that motivated the
 amputation — and that Step 2 §3.2 argues for at length — has no local witness.
+
+**So this is a frozen projection / test-realisation mismatch, and it is the first one found.**
+§5.1 states flatly that *every* postcondition of §3.1, §3.2, §3.3, §3.5 and §3.6 survives the
+observation projection. `SEM-STO-4` is in §3.2, so §5.1 asserts it is locally decidable — and
+the plan allocated it a case ID on that basis. What the plan did not check, and what nothing in
+the tooling checks today, is that the case allocated to a surviving postcondition **realises
+that postcondition's unit**. `verify-plan.ts` checks the case IDs, their level split, their
+uniqueness and their outcomes; it does not check unit/postcondition pairing.
+
+That gap is a finding about the plan, not only about one test, and it is recorded here as one.
 
 ### 2.3 `LT-SEM-STK-4` / `LT-SEM-STK-5` assert selected positions only
 
@@ -90,12 +131,35 @@ but not vacuous: both cases can fail.
 
 **"213/213 green" remains true and remains a count.** It was never a strength claim, and
 §3.2.1 already bars the local suite from producing coverage or mutation evidence on its own.
-What changes is that at least one of the 213 is now known to be unfalsifiable, so the count
-overstates the suite by one case, and by two against the postcondition list.
 
-**No adjudicating figure is contaminated.** The only mutation and coverage figures taken
-under v3 belong to Baseline A, which is level A only; `SEM-CALL-5` and `SEM-STO-4` are both
-level B. The step-6a discovery figures were never quoted and are not quoted here.
+The accounting, stated exactly:
+
+```text
+213/213 green
+    = execution / pass count, and nothing more
+
+known limitations
+    3 case IDs   LT-SEM-CALL-5/{CALL,STATICCALL,DELEGATECALL}
+                 establish gas extraction, not "consumed"
+    1 case ID    LT-SEM-STO-4
+                 does not witness its U-RUN postcondition at all
+
+    => at least 4 case IDs incompletely realise 2 frozen postconditions
+```
+
+**An earlier draft of this record said the count "overstates the suite by one unfalsifiable
+case, and by two against the postcondition list". That was wrong in both numbers and in kind**
+— it treated `SEM-CALL-5` as one case rather than three, and it described `LT-SEM-STO-4` as a
+weak duplicate rather than as a case pointing at the wrong unit. The figures above supersede it.
+"At least" is meant literally: the pairing gap in §2.2 was found by inspection, and nothing has
+audited the remaining 209 for it.
+
+**No adjudicating figure is contaminated, for a stronger reason than level.** Level-B
+qualification never happened at all — §10 puts it at 6b, and E1-v3 stopped at 6a. There is no
+Level-B mutation score, no Level-B coverage figure and no calibration result for these cases to
+contaminate. Separately, the only figures that do exist under v3 belong to Baseline A, which is
+level A only, while `SEM-CALL-5` and `SEM-STO-4` are both level B. The step-6a discovery figures
+were never quoted and are not quoted here.
 
 **It sharpens rather than weakens the experiment's own question.** E1 asks whether locally
 strong evidence can miss a boundary defect. A local case that cannot fail is a reminder that

@@ -107,17 +107,31 @@ a frozen postcondition list, and a postcondition can be locally satisfiable by c
 a consequence the composition-level corpus pins down. The 213 are complete with respect to the
 plan, not with respect to every fact about the implementation.
 
-## Two of the 213 are weaker than their postconditions
+## At least four of the 213 realise their postconditions incompletely
 
-External review after this record was written found that `LT-SEM-CALL-5` is **vacuous** — its
-closing assertion compares a length against the constant the test just built it from — and
-that `LT-SEM-STO-4` performs no halt, so the one postcondition motivating the rollback
-amputation has no local witness. Both are frozen and stay unedited; see
-[`v3-review-findings.md`](./v3-review-findings.md) §2 for the verification and for what it
-does to the claim above.
+External review after this record was written found two frozen postconditions whose cases do
+not establish what the postcondition says.
 
-"213/213 green" stands and was always a count rather than a strength claim. It now overstates
-the suite by one unfalsifiable case, and by two against the postcondition list.
+`LT-SEM-CALL-5` — three case IDs, since §3.3 gives `SEM-CALL-5` all three call kinds —
+establishes that `gas` is read from the right stack position, and nothing about its being
+*consumed*: the closing assertion compares a length against the constant the test built it
+from, and the operand stack is passed as a spread copy, which discards the before-and-after
+observation §5.1 cited when admitting `SEM-CALL-1..8` as surviving.
+
+`LT-SEM-STO-4` performs no halt, and sits in `U-STO` while frozen §3.2 assigns `SEM-STO-4` to
+**`U-RUN`**. It does not witness a weaker form of its postcondition; it witnesses a different
+unit's.
+
+```text
+213/213 green          execution / pass count, and nothing more
+  3 case IDs           LT-SEM-CALL-5/{CALL,STATICCALL,DELEGATECALL} — extraction, not consumption
+  1 case ID            LT-SEM-STO-4 — does not witness its U-RUN postcondition at all
+  => at least 4 case IDs incompletely realise 2 frozen postconditions
+```
+
+All four are frozen and stay unedited. See [`v3-review-findings.md`](./v3-review-findings.md)
+§2 for the verification, and §2.2 for the plan-level gap it exposes: nothing in `verify-plan.ts`
+checks that a case allocated to a surviving postcondition realises that postcondition's unit.
 
 ## Provenance
 
