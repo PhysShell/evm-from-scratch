@@ -1,5 +1,20 @@
 # E1-v4 — preregistration
 
+> ## ⚠ THIS DOCUMENT WAS NEVER FROZEN
+>
+> It was written, reviewed and **rejected before its freeze event**, and is preserved as the
+> record of what was attempted. See [`E1-v4-STOP.md`](./E1-v4-STOP.md) —
+> `STOP_UNFREEZABLE_PREREGISTRATION`.
+>
+> Two blockers, either one disqualifying: **§3.10 is a second decision-rule amendment**
+> smuggled past a one-amendment contract, and **§3.12 observed execution outcomes before the
+> freeze** and then wrote §3.10, §3.9's retraction and P3′ from them.
+>
+> Nothing here governs anything. No `M0-v4` exists and step 6a was never run. The figures in
+> §3.12 are **prior calibration** and may never be cited as measurements taken under a freeze.
+> The substance of `A2` — a byte string is not an executable program — is untouched by either
+> blocker and carries forward to `E1-v5`.
+
 **Status:** a **new** preregistration, opened because
 [E1-v3 stopped](./E1-v3-STOP.md) with `NO_FROZEN_BRANCH_WITNESS`. It is not an edit of any
 earlier document; v1, v2 and v3 remain frozen, stopped and unmodified.
