@@ -600,7 +600,7 @@ one that occurred.
 **P4 is stated to be refutable:** if step 6a stops again, the cause will be P2 — the
 enumeration order and budget starving a field that is first in the record — and not the code
 domain. **That would be a defect in §8.2.1's record rule, not in A2**, and it would be an
-`E1-v5` matter. It is written here, before the run, precisely so that it cannot be claimed
+`E1-v6` matter. It is written here, before the run, precisely so that it cannot be claimed
 afterwards as a prediction that was always obvious.
 
 None of P1–P4 licenses a repair mid-run. §8.2.2 governs, and its consequence is a stop.
