@@ -1,345 +1,529 @@
-[
- {
-  "file": "src/call.ts",
-  "line": 44,
-  "column": 42,
-  "type": "binary-expr",
-  "arm": 1
+{
+ "run": "E1-v5 step 6a \u2014 discovery coverage",
+ "scope": "the 213 core postcondition tests only (test/core), per Step 0 \u00a73.2.1",
+ "excluded": [
+  "oracle-a",
+  "oracle-b",
+  "composition witnesses W1-W6",
+  "c2_control_suite"
+ ],
+ "note": "ordinal is the arm index within its file, in istanbul enumeration order. It is what the branch search aligns on: the search instruments transpiled JS, whose positions differ from these TypeScript positions, but whose arm ORDER is the same. `arm_types` lets that correspondence be verified rather than assumed.",
+ "arm_types": {
+  "src/ari.ts": [
+   "cond-expr",
+   "cond-expr",
+   "cond-expr",
+   "cond-expr"
+  ],
+  "src/call.ts": [
+   "binary-expr",
+   "binary-expr",
+   "cond-expr",
+   "cond-expr",
+   "cond-expr",
+   "cond-expr"
+  ],
+  "src/cmp.ts": [
+   "cond-expr",
+   "cond-expr",
+   "cond-expr",
+   "cond-expr",
+   "cond-expr",
+   "cond-expr",
+   "cond-expr",
+   "cond-expr"
+  ],
+  "src/dec.ts": [
+   "binary-expr",
+   "binary-expr",
+   "if",
+   "if",
+   "binary-expr",
+   "binary-expr"
+  ],
+  "src/domain.ts": [
+   "cond-expr",
+   "cond-expr"
+  ],
+  "src/entry.ts": [
+   "binary-expr",
+   "binary-expr",
+   "binary-expr",
+   "binary-expr"
+  ],
+  "src/grd.ts": [
+   "if",
+   "if"
+  ],
+  "src/hlt.ts": [
+   "cond-expr",
+   "cond-expr"
+  ],
+  "src/jmp.ts": [
+   "binary-expr",
+   "binary-expr",
+   "if",
+   "if",
+   "cond-expr",
+   "cond-expr",
+   "if",
+   "if"
+  ],
+  "src/mem.ts": [
+   "if",
+   "if",
+   "binary-expr",
+   "binary-expr",
+   "binary-expr",
+   "binary-expr",
+   "if",
+   "if"
+  ],
+  "src/opcodes.ts": [
+   "binary-expr",
+   "binary-expr",
+   "binary-expr",
+   "binary-expr",
+   "binary-expr",
+   "binary-expr"
+  ],
+  "src/ret.ts": [
+   "if",
+   "if",
+   "cond-expr",
+   "cond-expr",
+   "binary-expr",
+   "binary-expr"
+  ],
+  "src/run.ts": [
+   "if",
+   "if",
+   "if",
+   "if",
+   "if",
+   "if",
+   "if",
+   "if",
+   "switch",
+   "switch",
+   "switch",
+   "switch",
+   "switch",
+   "switch",
+   "switch",
+   "switch",
+   "switch",
+   "switch",
+   "switch",
+   "switch",
+   "switch",
+   "switch",
+   "switch",
+   "switch",
+   "switch",
+   "switch",
+   "switch",
+   "switch",
+   "switch",
+   "switch",
+   "switch",
+   "switch",
+   "switch",
+   "switch",
+   "switch",
+   "switch",
+   "if",
+   "if",
+   "if",
+   "if",
+   "if",
+   "if",
+   "cond-expr",
+   "cond-expr",
+   "if",
+   "if",
+   "default-arg"
+  ],
+  "src/stack.ts": [
+   "if",
+   "if",
+   "if",
+   "if",
+   "if",
+   "if",
+   "if",
+   "if",
+   "binary-expr",
+   "binary-expr"
+  ],
+  "src/sto.ts": [
+   "if",
+   "if",
+   "binary-expr",
+   "binary-expr"
+  ]
  },
- {
-  "file": "src/dec.ts",
-  "line": 22,
-  "column": 25,
-  "type": "binary-expr",
-  "arm": 1
- },
- {
-  "file": "src/jmp.ts",
-  "line": 17,
-  "column": 27,
-  "type": "binary-expr",
-  "arm": 1
- },
- {
-  "file": "src/mem.ts",
-  "line": 43,
-  "column": 52,
-  "type": "binary-expr",
-  "arm": 1
- },
- {
-  "file": "src/mem.ts",
-  "line": 56,
-  "column": 66,
-  "type": "binary-expr",
-  "arm": 1
- },
- {
-  "file": "src/mem.ts",
-  "line": 62,
-  "column": 2,
-  "type": "if",
-  "arm": 0
- },
- {
-  "file": "src/opcodes.ts",
-  "line": 41,
-  "column": 23,
-  "type": "binary-expr",
-  "arm": 1
- },
- {
-  "file": "src/opcodes.ts",
-  "line": 45,
-  "column": 24,
-  "type": "binary-expr",
-  "arm": 1
- },
- {
-  "file": "src/opcodes.ts",
-  "line": 49,
-  "column": 35,
-  "type": "function",
-  "arm": 0
- },
- {
-  "file": "src/opcodes.ts",
-  "line": 53,
-  "column": 36,
-  "type": "function",
-  "arm": 0
- },
- {
-  "file": "src/ret.ts",
-  "line": 49,
-  "column": 75,
-  "type": "binary-expr",
-  "arm": 1
- },
- {
-  "file": "src/run.ts",
-  "line": 57,
-  "column": 6,
-  "type": "if",
-  "arm": 0
- },
- {
-  "file": "src/run.ts",
-  "line": 58,
-  "column": 6,
-  "type": "if",
-  "arm": 0
- },
- {
-  "file": "src/run.ts",
-  "line": 61,
-  "column": 6,
-  "type": "if",
-  "arm": 0
- },
- {
-  "file": "src/run.ts",
-  "line": 63,
-  "column": 52,
-  "type": "function",
-  "arm": 0
- },
- {
-  "file": "src/run.ts",
-  "line": 70,
-  "column": 8,
-  "type": "switch",
-  "arm": 1
- },
- {
-  "file": "src/run.ts",
-  "line": 71,
-  "column": 8,
-  "type": "switch",
-  "arm": 2
- },
- {
-  "file": "src/run.ts",
-  "line": 72,
-  "column": 8,
-  "type": "switch",
-  "arm": 3
- },
- {
-  "file": "src/run.ts",
-  "line": 73,
-  "column": 8,
-  "type": "switch",
-  "arm": 4
- },
- {
-  "file": "src/run.ts",
-  "line": 74,
-  "column": 8,
-  "type": "switch",
-  "arm": 5
- },
- {
-  "file": "src/run.ts",
-  "line": 75,
-  "column": 8,
-  "type": "switch",
-  "arm": 6
- },
- {
-  "file": "src/run.ts",
-  "line": 76,
-  "column": 8,
-  "type": "switch",
-  "arm": 7
- },
- {
-  "file": "src/run.ts",
-  "line": 77,
-  "column": 8,
-  "type": "switch",
-  "arm": 8
- },
- {
-  "file": "src/run.ts",
-  "line": 78,
-  "column": 8,
-  "type": "switch",
-  "arm": 9
- },
- {
-  "file": "src/run.ts",
-  "line": 79,
-  "column": 8,
-  "type": "switch",
-  "arm": 10
- },
- {
-  "file": "src/run.ts",
-  "line": 82,
-  "column": 8,
-  "type": "switch",
-  "arm": 12
- },
- {
-  "file": "src/run.ts",
-  "line": 84,
-  "column": 0,
-  "type": "if",
-  "arm": 1
- },
- {
-  "file": "src/run.ts",
-  "line": 84,
-  "column": 10,
-  "type": "if",
-  "arm": 0
- },
- {
-  "file": "src/run.ts",
-  "line": 88,
-  "column": 8,
-  "type": "switch",
-  "arm": 13
- },
- {
-  "file": "src/run.ts",
-  "line": 91,
-  "column": 0,
-  "type": "if",
-  "arm": 1
- },
- {
-  "file": "src/run.ts",
-  "line": 91,
-  "column": 10,
-  "type": "if",
-  "arm": 0
- },
- {
-  "file": "src/run.ts",
-  "line": 92,
-  "column": 0,
-  "type": "if",
-  "arm": 1
- },
- {
-  "file": "src/run.ts",
-  "line": 92,
-  "column": 12,
-  "type": "if",
-  "arm": 0
- },
- {
-  "file": "src/run.ts",
-  "line": 105,
-  "column": 8,
-  "type": "switch",
-  "arm": 18
- },
- {
-  "file": "src/run.ts",
-  "line": 113,
-  "column": 8,
-  "type": "switch",
-  "arm": 19
- },
- {
-  "file": "src/run.ts",
-  "line": 121,
-  "column": 8,
-  "type": "switch",
-  "arm": 20
- },
- {
-  "file": "src/run.ts",
-  "line": 123,
-  "column": 8,
-  "type": "switch",
-  "arm": 21
- },
- {
-  "file": "src/run.ts",
-  "line": 124,
-  "column": 8,
-  "type": "switch",
-  "arm": 22
- },
- {
-  "file": "src/run.ts",
-  "line": 131,
-  "column": 8,
-  "type": "switch",
-  "arm": 23
- },
- {
-  "file": "src/run.ts",
-  "line": 132,
-  "column": 8,
-  "type": "switch",
-  "arm": 24
- },
- {
-  "file": "src/run.ts",
-  "line": 135,
-  "column": 45,
-  "type": "cond-expr",
-  "arm": 0
- },
- {
-  "file": "src/run.ts",
-  "line": 135,
-  "column": 56,
-  "type": "cond-expr",
-  "arm": 1
- },
- {
-  "file": "src/run.ts",
-  "line": 138,
-  "column": 8,
-  "type": "switch",
-  "arm": 25
- },
- {
-  "file": "src/run.ts",
-  "line": 139,
-  "column": 8,
-  "type": "switch",
-  "arm": 26
- },
- {
-  "file": "src/run.ts",
-  "line": 147,
-  "column": 8,
-  "type": "switch",
-  "arm": 27
- },
- {
-  "file": "src/run.ts",
-  "line": 154,
-  "column": 0,
-  "type": "if",
-  "arm": 1
- },
- {
-  "file": "src/run.ts",
-  "line": 154,
-  "column": 4,
-  "type": "if",
-  "arm": 0
- },
- {
-  "file": "src/run.ts",
-  "line": 171,
-  "column": 9,
-  "type": "function",
-  "arm": 0
- },
- {
-  "file": "src/sto.ts",
-  "line": 15,
-  "column": 2,
-  "type": "if",
-  "arm": 0
- }
-]
+ "uncovered_count": 45,
+ "uncovered": [
+  {
+   "file": "src/call.ts",
+   "ordinal": 1,
+   "line": 44,
+   "column": 42,
+   "type": "binary-expr",
+   "arm": 1
+  },
+  {
+   "file": "src/dec.ts",
+   "ordinal": 1,
+   "line": 22,
+   "column": 25,
+   "type": "binary-expr",
+   "arm": 1
+  },
+  {
+   "file": "src/jmp.ts",
+   "ordinal": 1,
+   "line": 17,
+   "column": 27,
+   "type": "binary-expr",
+   "arm": 1
+  },
+  {
+   "file": "src/mem.ts",
+   "ordinal": 3,
+   "line": 43,
+   "column": 52,
+   "type": "binary-expr",
+   "arm": 1
+  },
+  {
+   "file": "src/mem.ts",
+   "ordinal": 5,
+   "line": 56,
+   "column": 66,
+   "type": "binary-expr",
+   "arm": 1
+  },
+  {
+   "file": "src/mem.ts",
+   "ordinal": 6,
+   "line": 62,
+   "column": 2,
+   "type": "if",
+   "arm": 0
+  },
+  {
+   "file": "src/opcodes.ts",
+   "ordinal": 3,
+   "line": 41,
+   "column": 23,
+   "type": "binary-expr",
+   "arm": 1
+  },
+  {
+   "file": "src/opcodes.ts",
+   "ordinal": 5,
+   "line": 45,
+   "column": 24,
+   "type": "binary-expr",
+   "arm": 1
+  },
+  {
+   "file": "src/ret.ts",
+   "ordinal": 5,
+   "line": 49,
+   "column": 75,
+   "type": "binary-expr",
+   "arm": 1
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 2,
+   "line": 57,
+   "column": 6,
+   "type": "if",
+   "arm": 0
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 4,
+   "line": 58,
+   "column": 6,
+   "type": "if",
+   "arm": 0
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 6,
+   "line": 61,
+   "column": 6,
+   "type": "if",
+   "arm": 0
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 9,
+   "line": 70,
+   "column": 8,
+   "type": "switch",
+   "arm": 1
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 10,
+   "line": 71,
+   "column": 8,
+   "type": "switch",
+   "arm": 2
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 11,
+   "line": 72,
+   "column": 8,
+   "type": "switch",
+   "arm": 3
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 12,
+   "line": 73,
+   "column": 8,
+   "type": "switch",
+   "arm": 4
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 13,
+   "line": 74,
+   "column": 8,
+   "type": "switch",
+   "arm": 5
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 14,
+   "line": 75,
+   "column": 8,
+   "type": "switch",
+   "arm": 6
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 15,
+   "line": 76,
+   "column": 8,
+   "type": "switch",
+   "arm": 7
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 16,
+   "line": 77,
+   "column": 8,
+   "type": "switch",
+   "arm": 8
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 17,
+   "line": 78,
+   "column": 8,
+   "type": "switch",
+   "arm": 9
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 18,
+   "line": 79,
+   "column": 8,
+   "type": "switch",
+   "arm": 10
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 20,
+   "line": 82,
+   "column": 8,
+   "type": "switch",
+   "arm": 12
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 21,
+   "line": 88,
+   "column": 8,
+   "type": "switch",
+   "arm": 13
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 26,
+   "line": 105,
+   "column": 8,
+   "type": "switch",
+   "arm": 18
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 27,
+   "line": 113,
+   "column": 8,
+   "type": "switch",
+   "arm": 19
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 28,
+   "line": 121,
+   "column": 8,
+   "type": "switch",
+   "arm": 20
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 29,
+   "line": 123,
+   "column": 8,
+   "type": "switch",
+   "arm": 21
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 30,
+   "line": 124,
+   "column": 8,
+   "type": "switch",
+   "arm": 22
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 31,
+   "line": 131,
+   "column": 8,
+   "type": "switch",
+   "arm": 23
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 32,
+   "line": 132,
+   "column": 8,
+   "type": "switch",
+   "arm": 24
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 33,
+   "line": 138,
+   "column": 8,
+   "type": "switch",
+   "arm": 25
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 34,
+   "line": 139,
+   "column": 8,
+   "type": "switch",
+   "arm": 26
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 35,
+   "line": 147,
+   "column": 8,
+   "type": "switch",
+   "arm": 27
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 36,
+   "line": 84,
+   "column": 10,
+   "type": "if",
+   "arm": 0
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 37,
+   "line": null,
+   "column": null,
+   "type": "if",
+   "arm": 1
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 38,
+   "line": 91,
+   "column": 10,
+   "type": "if",
+   "arm": 0
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 39,
+   "line": null,
+   "column": null,
+   "type": "if",
+   "arm": 1
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 40,
+   "line": 92,
+   "column": 12,
+   "type": "if",
+   "arm": 0
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 41,
+   "line": null,
+   "column": null,
+   "type": "if",
+   "arm": 1
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 42,
+   "line": 135,
+   "column": 45,
+   "type": "cond-expr",
+   "arm": 0
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 43,
+   "line": 135,
+   "column": 56,
+   "type": "cond-expr",
+   "arm": 1
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 44,
+   "line": 154,
+   "column": 4,
+   "type": "if",
+   "arm": 0
+  },
+  {
+   "file": "src/run.ts",
+   "ordinal": 45,
+   "line": null,
+   "column": null,
+   "type": "if",
+   "arm": 1
+  },
+  {
+   "file": "src/sto.ts",
+   "ordinal": 0,
+   "line": 15,
+   "column": 2,
+   "type": "if",
+   "arm": 0
+  }
+ ]
+}
