@@ -23,7 +23,7 @@ import { join, relative } from 'node:path';
 import { MAX_UINT256 } from '../src/domain';
 import type { Frame, FrameResult, World, Account } from '../src/domain';
 import { buildDomain } from './program-domain';
-import { loadAll, armsByFile, checkAlignment, snapshot, covered } from './instrumented';
+import { loadAll, armSourcePositions, validateAlignment, snapshot, covered } from './instrumented';
 
 const E1 = join(__dirname, '..');
 const BUDGET = 4096;
@@ -289,7 +289,7 @@ const RECORDS: Record<string, UnitRecord> = {
 // ---------------------------------------------------------------------------
 interface Discovery {
   uncovered: { file: string; ordinal: number; line: number; column: number; type: string; arm: number }[];
-  arm_types: Record<string, string[]>;
+  arms: Record<string, { type: string; line: number | null; column: number | null }[]>;
 }
 
 const discovery: Discovery = JSON.parse(
@@ -298,15 +298,19 @@ const discovery: Discovery = JSON.parse(
 
 const units = loadAll();
 const rootRelative = (p: string): string => relative(E1, p);
-const mine = armsByFile(rootRelative);
-const mismatched = checkAlignment(mine, new Map(Object.entries(discovery.arm_types)));
+
+async function main(): Promise<void> {
+const mapped = await armSourcePositions(rootRelative);
+const alignment = validateAlignment(discovery.arms, mapped);
+const mine = new Map([...mapped].map(([f, arms]) => [f, arms.map((a) => ({ key: a.key, type: a.type }))]));
 
 console.log(`budget                B = ${BUDGET}`);
 console.log(`|D_program|             ${D_PROGRAM.length}`);
 console.log(`uncovered arms          ${discovery.uncovered.length}`);
-console.log(`arm alignment           ${mismatched.length === 0 ? 'verified for every file' : `MISMATCH in ${mismatched.join(', ')}`}`);
-if (mismatched.length > 0) {
-  console.log('\nthe discovery run and this instrumentation disagree on arm order; nothing is aligned');
+console.log(`arm identity            ${alignment.byPosition} by source position, ${alignment.bySibling} by matched sibling, ${alignment.disagree.length} disagree`);
+if (alignment.disagree.length > 0) {
+  console.log('\nthe ordinal correspondence is not established; no result here would mean anything');
+  for (const d of alignment.disagree) console.log(`  ${d}`);
   process.exit(2);
 }
 
@@ -397,3 +401,6 @@ if (unwitnessed.length > 0) {
 }
 
 console.log('\nevery uncovered arm has a witness within the budget');
+}
+
+void main();

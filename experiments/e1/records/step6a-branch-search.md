@@ -6,8 +6,15 @@ Executes Step 2 §10 step 6a under [E1-v5](../../../docs/experiments/E1-v5-prere
 final: the governing documents may no longer be revised, and a revision required after it
 produces `E1-v6`.
 
-**It ends in a stop.** `M1` was not written and no adjudicating figure was produced. See
-[`E1-v5-STOP.md`](../../../docs/experiments/E1-v5-STOP.md).
+**It ends in a stop, and the stop is about the procedure rather than about the specimen.**
+`M1` was not written and no adjudicating figure was produced. See
+[`E1-v5-STOP.md`](../../../docs/experiments/E1-v5-STOP.md) —
+`STOP_PROTOCOL_ARM_ORDER_UNDERSPECIFIED`.
+
+**Everything below §4 is an observation under the file order this implementation chose**, not
+the uniquely determined §8.2.2 result. Frozen Step 2 orders arms "by source position" but
+defines no total order BETWEEN files, and different admissible orders give different outcomes
+— §7 sets that out.
 
 ## 1. Provenance
 
@@ -46,26 +53,47 @@ which jest's whole-suite coverage cannot do. `tools/instrumented.ts` therefore l
 production modules through `istanbul-lib-instrument` in memory — production code is not
 modified.
 
-That creates a coordinate problem, and the honest fix is worth recording because two obvious
-ones failed:
+That creates a coordinate problem, recorded with its dead ends because they cost real time:
 
 ```text
 positions differ   the search instruments TRANSPILED JavaScript, so its branchMap carries
                    generated-JS lines; jest reports TypeScript lines
-attempt 1 FAILED   passing the source map to instrumentSync — istanbul stores the map for a
-                   later remap rather than rewriting positions
+attempt 1 FAILED   passing the map to instrumentSync — istanbul stores it in the coverage
+                   object for a later remap rather than rewriting branchMap positions
 attempt 2 FAILED   remapping the whole coverage map with istanbul-lib-source-maps, including
-                   a counter-tagging trick to keep the arms distinguishable — positions did
-                   not move
-what works         ORDER corresponds exactly. Both are istanbul walking the same program, so
-                   the k-th arm of a file is the same arm in both.
+                   a counter-tagging trick to keep arms distinguishable — positions did not
+                   move
+what works         mapping each arm's own position through the transpiler's source map
+                   directly, with SourceMapConsumer
 ```
 
-So arms are aligned by ordinal — and the alignment is **verified, not assumed**: the discovery
-record stores each file's full arm-type sequence, and the search refuses to align a file whose
-sequence disagrees. It reported `arm alignment verified for every file`.
+Arms are therefore targeted by ordinal, and establishing that the ordinal means the same thing
+on both sides took two attempts of its own — the first rejected in review:
 
-## 4. The frozen §8.2.2 search
+```text
+REJECTED     comparing per-file sequences of istanbul `type` strings. A permutation among
+             adjacent same-typed arms passes it unchanged, and src/jmp.ts alone opens
+             `binary-expr, binary-expr, if, if`. Re-running the search does not test it,
+             since the rerun goes through the same matcher.
+
+ESTABLISHED  each arm's own generated-JS position mapped back through the transpiler's
+             source map and compared with the TypeScript position the discovery run
+             recorded for that ordinal:
+                 103  matched by source position
+                  20  positionless implicit-else arms, each identified by a sibling that
+                      matched positionally
+                   0  disagreements
+```
+
+`tools/verify-arm-alignment.ts` performs it and the search refuses to run when it fails, so no
+result here rests on an unestablished ordinal mapping.
+
+## 4. The §8.2.2 search, under this implementation's file order
+
+The files were iterated in the order the coverage extractor produced them, alphabetically by
+repository-relative path: `call.ts -> dec.ts -> jmp.ts -> mem.ts -> opcodes.ts -> ret.ts ->
+run.ts -> sto.ts`. §7 explains why that choice is result-bearing and why the outcome below is
+therefore an observation rather than the frozen procedure's verdict.
 
 ```text
 budget          B = 4096 candidates per arm
@@ -87,7 +115,7 @@ LT-BR-U-DEC-001    src/dec.ts:22:25 binary-expr#1
     candidate 1    code=ε pc=0
 ```
 
-Then, at the third arm in frozen source order:
+Then, at the third file in this order:
 
 ```text
 NO_FROZEN_BRANCH_WITNESS   src/jmp.ts:17:27 binary-expr#1   B = 4096
@@ -125,7 +153,28 @@ The procedure also, deliberately, does **not** decide reachability — "whether 
 §5 above is an observation about the source, not a verdict the procedure delivered. The stop
 would be identical either way.
 
-## 7. What the §3.10 reading did, and did not, do here
+## 7. The order is not frozen, and it decides the outcome
+
+§8.2.2 iterates "in frozen source order"; §8.2 allocates `LT-BR-*` "in ascending order of
+source position". Neither defines a total order **between files**, and the choice changes the
+result in two concrete ways:
+
+```text
+§1.3 unit order        U-DEC and U-JMP both precede U-CALL, so the run would take dec.ts's
+                       witness, reach jmp.ts and stop — and LT-BR-U-CALL-001 would never be
+                       emitted. The realised prefix of the frozen ID allocation changes.
+
+mem.ts before jmp.ts   U-MEM's operand domain contains 2²⁵⁶ − 1, which reaches an allocation
+                       the host cannot make: E1-v5 §3.10's evaluation stop, at candidate 11.
+                       The run ends with a preserved candidate index and error class instead
+                       of NO_FROZEN_BRANCH_WITNESS.
+```
+
+Two admissible orders, three outcomes, and the frozen procedure selects none of them. It
+cannot be repaired inside v5: step 6a was the first measured run, so adding a file-order rule
+now would pick which of three known outcomes becomes the record.
+
+## 8. What the §3.10 reading did, and did not, do here
 
 An earlier execution of this same procedure — before the tool was corrected — surveyed every
 arm instead of halting at the first exhausted one, and reached a `RangeError` in `U-MEM` at
@@ -142,7 +191,7 @@ contains `2²⁵⁶ − 1`. A later version reaching `U-MEM` before exhausting a
 meet it, and §3.10 says what happens then — the run stops, the candidate index, arm and error
 class are preserved, and no next candidate is tried.
 
-## 8. Scope
+## 9. Scope
 
 **Nothing is established or refuted about boundary blindness.** No specimen was built, no
 defect was injected, no calibration figure exists. `M1` does not exist, and §7 makes it a

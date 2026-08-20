@@ -7,162 +7,7 @@
   "composition witnesses W1-W6",
   "c2_control_suite"
  ],
- "note": "ordinal is the arm index within its file, in istanbul enumeration order. It is what the branch search aligns on: the search instruments transpiled JS, whose positions differ from these TypeScript positions, but whose arm ORDER is the same. `arm_types` lets that correspondence be verified rather than assumed.",
- "arm_types": {
-  "src/ari.ts": [
-   "cond-expr",
-   "cond-expr",
-   "cond-expr",
-   "cond-expr"
-  ],
-  "src/call.ts": [
-   "binary-expr",
-   "binary-expr",
-   "cond-expr",
-   "cond-expr",
-   "cond-expr",
-   "cond-expr"
-  ],
-  "src/cmp.ts": [
-   "cond-expr",
-   "cond-expr",
-   "cond-expr",
-   "cond-expr",
-   "cond-expr",
-   "cond-expr",
-   "cond-expr",
-   "cond-expr"
-  ],
-  "src/dec.ts": [
-   "binary-expr",
-   "binary-expr",
-   "if",
-   "if",
-   "binary-expr",
-   "binary-expr"
-  ],
-  "src/domain.ts": [
-   "cond-expr",
-   "cond-expr"
-  ],
-  "src/entry.ts": [
-   "binary-expr",
-   "binary-expr",
-   "binary-expr",
-   "binary-expr"
-  ],
-  "src/grd.ts": [
-   "if",
-   "if"
-  ],
-  "src/hlt.ts": [
-   "cond-expr",
-   "cond-expr"
-  ],
-  "src/jmp.ts": [
-   "binary-expr",
-   "binary-expr",
-   "if",
-   "if",
-   "cond-expr",
-   "cond-expr",
-   "if",
-   "if"
-  ],
-  "src/mem.ts": [
-   "if",
-   "if",
-   "binary-expr",
-   "binary-expr",
-   "binary-expr",
-   "binary-expr",
-   "if",
-   "if"
-  ],
-  "src/opcodes.ts": [
-   "binary-expr",
-   "binary-expr",
-   "binary-expr",
-   "binary-expr",
-   "binary-expr",
-   "binary-expr"
-  ],
-  "src/ret.ts": [
-   "if",
-   "if",
-   "cond-expr",
-   "cond-expr",
-   "binary-expr",
-   "binary-expr"
-  ],
-  "src/run.ts": [
-   "if",
-   "if",
-   "if",
-   "if",
-   "if",
-   "if",
-   "if",
-   "if",
-   "switch",
-   "switch",
-   "switch",
-   "switch",
-   "switch",
-   "switch",
-   "switch",
-   "switch",
-   "switch",
-   "switch",
-   "switch",
-   "switch",
-   "switch",
-   "switch",
-   "switch",
-   "switch",
-   "switch",
-   "switch",
-   "switch",
-   "switch",
-   "switch",
-   "switch",
-   "switch",
-   "switch",
-   "switch",
-   "switch",
-   "switch",
-   "switch",
-   "if",
-   "if",
-   "if",
-   "if",
-   "if",
-   "if",
-   "cond-expr",
-   "cond-expr",
-   "if",
-   "if",
-   "default-arg"
-  ],
-  "src/stack.ts": [
-   "if",
-   "if",
-   "if",
-   "if",
-   "if",
-   "if",
-   "if",
-   "if",
-   "binary-expr",
-   "binary-expr"
-  ],
-  "src/sto.ts": [
-   "if",
-   "if",
-   "binary-expr",
-   "binary-expr"
-  ]
- },
+ "note": "ordinal is the arm index within its file, in istanbul enumeration order. `arms` lists EVERY arm of each file with its type and TypeScript position, so the branch search can validate its ordinal correspondence per arm \u2014 by mapping its own generated-JS positions back through the source map \u2014 instead of comparing type sequences, which a permutation among same-typed arms would pass.",
  "uncovered_count": 45,
  "uncovered": [
   {
@@ -525,5 +370,652 @@
    "type": "if",
    "arm": 0
   }
- ]
+ ],
+ "arms": {
+  "src/ari.ts": [
+   {
+    "type": "cond-expr",
+    "line": 25,
+    "column": 20
+   },
+   {
+    "type": "cond-expr",
+    "line": 25,
+    "column": 25
+   },
+   {
+    "type": "cond-expr",
+    "line": 29,
+    "column": 20
+   },
+   {
+    "type": "cond-expr",
+    "line": 29,
+    "column": 25
+   }
+  ],
+  "src/call.ts": [
+   {
+    "type": "binary-expr",
+    "line": 44,
+    "column": 15
+   },
+   {
+    "type": "binary-expr",
+    "line": 44,
+    "column": 42
+   },
+   {
+    "type": "cond-expr",
+    "line": 49,
+    "column": 8
+   },
+   {
+    "type": "cond-expr",
+    "line": 55,
+    "column": 8
+   },
+   {
+    "type": "cond-expr",
+    "line": 58,
+    "column": 42
+   },
+   {
+    "type": "cond-expr",
+    "line": 58,
+    "column": 49
+   }
+  ],
+  "src/cmp.ts": [
+   {
+    "type": "cond-expr",
+    "line": 5,
+    "column": 17
+   },
+   {
+    "type": "cond-expr",
+    "line": 5,
+    "column": 22
+   },
+   {
+    "type": "cond-expr",
+    "line": 9,
+    "column": 17
+   },
+   {
+    "type": "cond-expr",
+    "line": 9,
+    "column": 22
+   },
+   {
+    "type": "cond-expr",
+    "line": 13,
+    "column": 19
+   },
+   {
+    "type": "cond-expr",
+    "line": 13,
+    "column": 24
+   },
+   {
+    "type": "cond-expr",
+    "line": 17,
+    "column": 20
+   },
+   {
+    "type": "cond-expr",
+    "line": 17,
+    "column": 25
+   }
+  ],
+  "src/dec.ts": [
+   {
+    "type": "binary-expr",
+    "line": 22,
+    "column": 13
+   },
+   {
+    "type": "binary-expr",
+    "line": 22,
+    "column": 25
+   },
+   {
+    "type": "if",
+    "line": 23,
+    "column": 2
+   },
+   {
+    "type": "if",
+    "line": null,
+    "column": null
+   },
+   {
+    "type": "binary-expr",
+    "line": 33,
+    "column": 43
+   },
+   {
+    "type": "binary-expr",
+    "line": 33,
+    "column": 63
+   }
+  ],
+  "src/domain.ts": [
+   {
+    "type": "cond-expr",
+    "line": 45,
+    "column": 18
+   },
+   {
+    "type": "cond-expr",
+    "line": 45,
+    "column": 33
+   }
+  ],
+  "src/entry.ts": [
+   {
+    "type": "binary-expr",
+    "line": 13,
+    "column": 18
+   },
+   {
+    "type": "binary-expr",
+    "line": 13,
+    "column": 27
+   },
+   {
+    "type": "binary-expr",
+    "line": 20,
+    "column": 12
+   },
+   {
+    "type": "binary-expr",
+    "line": 20,
+    "column": 23
+   }
+  ],
+  "src/grd.ts": [
+   {
+    "type": "if",
+    "line": 17,
+    "column": 2
+   },
+   {
+    "type": "if",
+    "line": null,
+    "column": null
+   }
+  ],
+  "src/hlt.ts": [
+   {
+    "type": "cond-expr",
+    "line": 20,
+    "column": 37
+   },
+   {
+    "type": "cond-expr",
+    "line": 20,
+    "column": 48
+   }
+  ],
+  "src/jmp.ts": [
+   {
+    "type": "binary-expr",
+    "line": 17,
+    "column": 15
+   },
+   {
+    "type": "binary-expr",
+    "line": 17,
+    "column": 27
+   },
+   {
+    "type": "if",
+    "line": 18,
+    "column": 4
+   },
+   {
+    "type": "if",
+    "line": null,
+    "column": null
+   },
+   {
+    "type": "cond-expr",
+    "line": 21,
+    "column": 23
+   },
+   {
+    "type": "cond-expr",
+    "line": 21,
+    "column": 43
+   },
+   {
+    "type": "if",
+    "line": 28,
+    "column": 2
+   },
+   {
+    "type": "if",
+    "line": null,
+    "column": null
+   }
+  ],
+  "src/mem.ts": [
+   {
+    "type": "if",
+    "line": 15,
+    "column": 2
+   },
+   {
+    "type": "if",
+    "line": null,
+    "column": null
+   },
+   {
+    "type": "binary-expr",
+    "line": 43,
+    "column": 27
+   },
+   {
+    "type": "binary-expr",
+    "line": 43,
+    "column": 52
+   },
+   {
+    "type": "binary-expr",
+    "line": 56,
+    "column": 41
+   },
+   {
+    "type": "binary-expr",
+    "line": 56,
+    "column": 66
+   },
+   {
+    "type": "if",
+    "line": 62,
+    "column": 2
+   },
+   {
+    "type": "if",
+    "line": null,
+    "column": null
+   }
+  ],
+  "src/opcodes.ts": [
+   {
+    "type": "binary-expr",
+    "line": 32,
+    "column": 9
+   },
+   {
+    "type": "binary-expr",
+    "line": 32,
+    "column": 24
+   },
+   {
+    "type": "binary-expr",
+    "line": 41,
+    "column": 9
+   },
+   {
+    "type": "binary-expr",
+    "line": 41,
+    "column": 23
+   },
+   {
+    "type": "binary-expr",
+    "line": 45,
+    "column": 9
+   },
+   {
+    "type": "binary-expr",
+    "line": 45,
+    "column": 24
+   }
+  ],
+  "src/ret.ts": [
+   {
+    "type": "if",
+    "line": 27,
+    "column": 2
+   },
+   {
+    "type": "if",
+    "line": null,
+    "column": null
+   },
+   {
+    "type": "cond-expr",
+    "line": 33,
+    "column": 47
+   },
+   {
+    "type": "cond-expr",
+    "line": 33,
+    "column": 52
+   },
+   {
+    "type": "binary-expr",
+    "line": 49,
+    "column": 43
+   },
+   {
+    "type": "binary-expr",
+    "line": 49,
+    "column": 75
+   }
+  ],
+  "src/run.ts": [
+   {
+    "type": "if",
+    "line": 56,
+    "column": 6
+   },
+   {
+    "type": "if",
+    "line": null,
+    "column": null
+   },
+   {
+    "type": "if",
+    "line": 57,
+    "column": 6
+   },
+   {
+    "type": "if",
+    "line": null,
+    "column": null
+   },
+   {
+    "type": "if",
+    "line": 58,
+    "column": 6
+   },
+   {
+    "type": "if",
+    "line": null,
+    "column": null
+   },
+   {
+    "type": "if",
+    "line": 61,
+    "column": 6
+   },
+   {
+    "type": "if",
+    "line": null,
+    "column": null
+   },
+   {
+    "type": "switch",
+    "line": 68,
+    "column": 8
+   },
+   {
+    "type": "switch",
+    "line": 70,
+    "column": 8
+   },
+   {
+    "type": "switch",
+    "line": 71,
+    "column": 8
+   },
+   {
+    "type": "switch",
+    "line": 72,
+    "column": 8
+   },
+   {
+    "type": "switch",
+    "line": 73,
+    "column": 8
+   },
+   {
+    "type": "switch",
+    "line": 74,
+    "column": 8
+   },
+   {
+    "type": "switch",
+    "line": 75,
+    "column": 8
+   },
+   {
+    "type": "switch",
+    "line": 76,
+    "column": 8
+   },
+   {
+    "type": "switch",
+    "line": 77,
+    "column": 8
+   },
+   {
+    "type": "switch",
+    "line": 78,
+    "column": 8
+   },
+   {
+    "type": "switch",
+    "line": 79,
+    "column": 8
+   },
+   {
+    "type": "switch",
+    "line": 80,
+    "column": 8
+   },
+   {
+    "type": "switch",
+    "line": 82,
+    "column": 8
+   },
+   {
+    "type": "switch",
+    "line": 88,
+    "column": 8
+   },
+   {
+    "type": "switch",
+    "line": 98,
+    "column": 8
+   },
+   {
+    "type": "switch",
+    "line": 101,
+    "column": 8
+   },
+   {
+    "type": "switch",
+    "line": 102,
+    "column": 8
+   },
+   {
+    "type": "switch",
+    "line": 103,
+    "column": 8
+   },
+   {
+    "type": "switch",
+    "line": 105,
+    "column": 8
+   },
+   {
+    "type": "switch",
+    "line": 113,
+    "column": 8
+   },
+   {
+    "type": "switch",
+    "line": 121,
+    "column": 8
+   },
+   {
+    "type": "switch",
+    "line": 123,
+    "column": 8
+   },
+   {
+    "type": "switch",
+    "line": 124,
+    "column": 8
+   },
+   {
+    "type": "switch",
+    "line": 131,
+    "column": 8
+   },
+   {
+    "type": "switch",
+    "line": 132,
+    "column": 8
+   },
+   {
+    "type": "switch",
+    "line": 138,
+    "column": 8
+   },
+   {
+    "type": "switch",
+    "line": 139,
+    "column": 8
+   },
+   {
+    "type": "switch",
+    "line": 147,
+    "column": 8
+   },
+   {
+    "type": "if",
+    "line": 84,
+    "column": 10
+   },
+   {
+    "type": "if",
+    "line": null,
+    "column": null
+   },
+   {
+    "type": "if",
+    "line": 91,
+    "column": 10
+   },
+   {
+    "type": "if",
+    "line": null,
+    "column": null
+   },
+   {
+    "type": "if",
+    "line": 92,
+    "column": 12
+   },
+   {
+    "type": "if",
+    "line": null,
+    "column": null
+   },
+   {
+    "type": "cond-expr",
+    "line": 135,
+    "column": 45
+   },
+   {
+    "type": "cond-expr",
+    "line": 135,
+    "column": 56
+   },
+   {
+    "type": "if",
+    "line": 154,
+    "column": 4
+   },
+   {
+    "type": "if",
+    "line": null,
+    "column": null
+   },
+   {
+    "type": "default-arg",
+    "line": 163,
+    "column": 49
+   }
+  ],
+  "src/stack.ts": [
+   {
+    "type": "if",
+    "line": 14,
+    "column": 2
+   },
+   {
+    "type": "if",
+    "line": null,
+    "column": null
+   },
+   {
+    "type": "if",
+    "line": 23,
+    "column": 2
+   },
+   {
+    "type": "if",
+    "line": null,
+    "column": null
+   },
+   {
+    "type": "if",
+    "line": 32,
+    "column": 2
+   },
+   {
+    "type": "if",
+    "line": null,
+    "column": null
+   },
+   {
+    "type": "if",
+    "line": 44,
+    "column": 2
+   },
+   {
+    "type": "if",
+    "line": null,
+    "column": null
+   },
+   {
+    "type": "binary-expr",
+    "line": 44,
+    "column": 6
+   },
+   {
+    "type": "binary-expr",
+    "line": 44,
+    "column": 27
+   }
+  ],
+  "src/sto.ts": [
+   {
+    "type": "if",
+    "line": 15,
+    "column": 2
+   },
+   {
+    "type": "if",
+    "line": null,
+    "column": null
+   },
+   {
+    "type": "binary-expr",
+    "line": 35,
+    "column": 9
+   },
+   {
+    "type": "binary-expr",
+    "line": 35,
+    "column": 62
+   }
+  ]
+ }
 }
