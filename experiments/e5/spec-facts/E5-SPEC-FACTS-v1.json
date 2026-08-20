@@ -1,0 +1,316 @@
+{
+  "02a7dc0511e5ea560beae4b431b6efe4f5a2b25eda343e43d5a2d28b38465d20": {
+    "fact_id": "02a7dc0511e5ea560beae4b431b6efe4f5a2b25eda343e43d5a2d28b38465d20",
+    "field": "storage_owner",
+    "kind": "SPEC_REQUIRED_BINDING",
+    "postcondition_id": "SEM-SEAM-P8",
+    "required": {
+      "node": "CALLEE_ADDRESS"
+    },
+    "site": "U-CALL/STATICCALL",
+    "spec_revision": "586bb92f66d9c6c889a9c2266832264d526a87b4"
+  },
+  "0fee4ce6c0519144bcec942a1228735e15c6533743458df085bd3fbd685dc4d3": {
+    "fact_id": "0fee4ce6c0519144bcec942a1228735e15c6533743458df085bd3fbd685dc4d3",
+    "field": "memory",
+    "kind": "SPEC_REQUIRED_BINDING",
+    "postcondition_id": "SEM-SEAM-P15",
+    "required": {
+      "node": "EMPTY"
+    },
+    "site": "U-CALL/STATICCALL",
+    "spec_revision": "586bb92f66d9c6c889a9c2266832264d526a87b4"
+  },
+  "12b2e490b8417c3f1486898615dcc0fa55269cec26fe56c7484949a9c3b0bf3f": {
+    "fact_id": "12b2e490b8417c3f1486898615dcc0fa55269cec26fe56c7484949a9c3b0bf3f",
+    "field": "address",
+    "kind": "SPEC_REQUIRED_BINDING",
+    "postcondition_id": "SEM-SEAM-P1",
+    "required": {
+      "node": "CALLEE_ADDRESS"
+    },
+    "site": "U-CALL/CALL",
+    "spec_revision": "586bb92f66d9c6c889a9c2266832264d526a87b4"
+  },
+  "205d510951a6a5db62f6ce1057cd331648e9ad85a554756359916f5a895686c8": {
+    "fact_id": "205d510951a6a5db62f6ce1057cd331648e9ad85a554756359916f5a895686c8",
+    "field": "returndata",
+    "kind": "SPEC_REQUIRED_BINDING",
+    "postcondition_id": "SEM-SEAM-P15",
+    "required": {
+      "node": "EMPTY"
+    },
+    "site": "U-CALL/DELEGATECALL",
+    "spec_revision": "586bb92f66d9c6c889a9c2266832264d526a87b4"
+  },
+  "39f7958b9890cdaca7dd37f2f9c233d402141646a8c99e2a093a2acf6d2e4c98": {
+    "fact_id": "39f7958b9890cdaca7dd37f2f9c233d402141646a8c99e2a093a2acf6d2e4c98",
+    "field": "returndata",
+    "kind": "SPEC_REQUIRED_BINDING",
+    "postcondition_id": "SEM-SEAM-P15",
+    "required": {
+      "node": "EMPTY"
+    },
+    "site": "U-CALL/CALL",
+    "spec_revision": "586bb92f66d9c6c889a9c2266832264d526a87b4"
+  },
+  "3ffdc9b455f07be2ca9c8aba07fbf95f4deecefe72b785bf6ed75acb45934675": {
+    "fact_id": "3ffdc9b455f07be2ca9c8aba07fbf95f4deecefe72b785bf6ed75acb45934675",
+    "field": "caller",
+    "kind": "SPEC_REQUIRED_BINDING",
+    "postcondition_id": "SEM-SEAM-P10",
+    "required": {
+      "field": "caller",
+      "node": "CURRENT_FRAME"
+    },
+    "site": "U-CALL/DELEGATECALL",
+    "spec_revision": "586bb92f66d9c6c889a9c2266832264d526a87b4"
+  },
+  "4cd86e9dfa4a0cfd63cb4b64449a5515f959f31d6606d4c79a8398c288093596": {
+    "fact_id": "4cd86e9dfa4a0cfd63cb4b64449a5515f959f31d6606d4c79a8398c288093596",
+    "field": "address",
+    "kind": "SPEC_REQUIRED_BINDING",
+    "postcondition_id": "SEM-SEAM-P9",
+    "required": {
+      "field": "address",
+      "node": "CURRENT_FRAME"
+    },
+    "site": "U-CALL/DELEGATECALL",
+    "spec_revision": "586bb92f66d9c6c889a9c2266832264d526a87b4"
+  },
+  "57b7f785874e21dba11cedd181ce3b0ed412309856cffa131fe6f2c0f0474dee": {
+    "fact_id": "57b7f785874e21dba11cedd181ce3b0ed412309856cffa131fe6f2c0f0474dee",
+    "field": "address",
+    "kind": "SPEC_REQUIRED_BINDING",
+    "postcondition_id": "SEM-SEAM-P5",
+    "required": {
+      "node": "CALLEE_ADDRESS"
+    },
+    "site": "U-CALL/STATICCALL",
+    "spec_revision": "586bb92f66d9c6c889a9c2266832264d526a87b4"
+  },
+  "57d6c95b95734d39d0fac3ebd8fda691ca518529af0ff619e389c490d37577b5": {
+    "fact_id": "57d6c95b95734d39d0fac3ebd8fda691ca518529af0ff619e389c490d37577b5",
+    "field": "storage_owner",
+    "kind": "SPEC_REQUIRED_BINDING",
+    "postcondition_id": "SEM-SEAM-P4",
+    "required": {
+      "node": "CALLEE_ADDRESS"
+    },
+    "site": "U-CALL/CALL",
+    "spec_revision": "586bb92f66d9c6c889a9c2266832264d526a87b4"
+  },
+  "59602caa8c5f5e0fb2b12cc85184f78681bf7380bc456336d8996f6bbdc364d3": {
+    "fact_id": "59602caa8c5f5e0fb2b12cc85184f78681bf7380bc456336d8996f6bbdc364d3",
+    "field": "stack",
+    "kind": "SPEC_REQUIRED_BINDING",
+    "postcondition_id": "SEM-SEAM-P15",
+    "required": {
+      "node": "EMPTY"
+    },
+    "site": "U-CALL/STATICCALL",
+    "spec_revision": "586bb92f66d9c6c889a9c2266832264d526a87b4"
+  },
+  "597ad1b4a642fa997da5accc34aa4c608b0bb4ebebb807ac94cf995d27745b6e": {
+    "fact_id": "597ad1b4a642fa997da5accc34aa4c608b0bb4ebebb807ac94cf995d27745b6e",
+    "field": "code",
+    "kind": "SPEC_REQUIRED_BINDING",
+    "postcondition_id": "SEM-SEAM-P13",
+    "required": {
+      "node": "CODE_AT",
+      "of": {
+        "node": "CALLEE_ADDRESS"
+      }
+    },
+    "site": "U-CALL/CALL",
+    "spec_revision": "586bb92f66d9c6c889a9c2266832264d526a87b4"
+  },
+  "5ca7e5dc7ca7132e6393ad64867d07409e2ff477696a8ed68404de05bea268a2": {
+    "fact_id": "5ca7e5dc7ca7132e6393ad64867d07409e2ff477696a8ed68404de05bea268a2",
+    "field": "static",
+    "kind": "SPEC_REQUIRED_BINDING",
+    "postcondition_id": "SEM-SEAM-P11",
+    "required": {
+      "field": "static",
+      "node": "CURRENT_FRAME"
+    },
+    "site": "U-CALL/DELEGATECALL",
+    "spec_revision": "586bb92f66d9c6c889a9c2266832264d526a87b4"
+  },
+  "6326f8a1d9c784919372dc7e505394fd7cf684aa4b98ed09d942efa8f31202e0": {
+    "fact_id": "6326f8a1d9c784919372dc7e505394fd7cf684aa4b98ed09d942efa8f31202e0",
+    "field": "code",
+    "kind": "SPEC_REQUIRED_BINDING",
+    "postcondition_id": "SEM-SEAM-P13",
+    "required": {
+      "node": "CODE_AT",
+      "of": {
+        "node": "CALLEE_ADDRESS"
+      }
+    },
+    "site": "U-CALL/DELEGATECALL",
+    "spec_revision": "586bb92f66d9c6c889a9c2266832264d526a87b4"
+  },
+  "6e2c0830d93707443b3d4b799c1c5353d96b410bde1adf0fc3cf8c7a770445c7": {
+    "fact_id": "6e2c0830d93707443b3d4b799c1c5353d96b410bde1adf0fc3cf8c7a770445c7",
+    "field": "caller",
+    "kind": "SPEC_REQUIRED_BINDING",
+    "postcondition_id": "SEM-SEAM-P2",
+    "required": {
+      "field": "address",
+      "node": "CURRENT_FRAME"
+    },
+    "site": "U-CALL/CALL",
+    "spec_revision": "586bb92f66d9c6c889a9c2266832264d526a87b4"
+  },
+  "7d02427fb4f9dcfc0d5163822f1f7817f0743f8f2a06cf7a801cd4aaf17ccf74": {
+    "fact_id": "7d02427fb4f9dcfc0d5163822f1f7817f0743f8f2a06cf7a801cd4aaf17ccf74",
+    "field": "caller",
+    "kind": "SPEC_REQUIRED_BINDING",
+    "postcondition_id": "SEM-SEAM-P6",
+    "required": {
+      "field": "address",
+      "node": "CURRENT_FRAME"
+    },
+    "site": "U-CALL/STATICCALL",
+    "spec_revision": "586bb92f66d9c6c889a9c2266832264d526a87b4"
+  },
+  "991771e2a1d1044338b065b82eed7c811115c2acb72dac84af29c00198cd3e15": {
+    "fact_id": "991771e2a1d1044338b065b82eed7c811115c2acb72dac84af29c00198cd3e15",
+    "field": "static",
+    "kind": "SPEC_REQUIRED_BINDING",
+    "postcondition_id": "SEM-SEAM-P7",
+    "required": {
+      "node": "LITERAL_BOOL",
+      "value": true
+    },
+    "site": "U-CALL/STATICCALL",
+    "spec_revision": "586bb92f66d9c6c889a9c2266832264d526a87b4"
+  },
+  "a1b7944403280fe4aac3b5a7071ae1be6de06245c53a60ccfef7f0572b0ccf56": {
+    "fact_id": "a1b7944403280fe4aac3b5a7071ae1be6de06245c53a60ccfef7f0572b0ccf56",
+    "field": "code",
+    "kind": "SPEC_REQUIRED_BINDING",
+    "postcondition_id": "SEM-SEAM-P13",
+    "required": {
+      "node": "CODE_AT",
+      "of": {
+        "node": "CALLEE_ADDRESS"
+      }
+    },
+    "site": "U-CALL/STATICCALL",
+    "spec_revision": "586bb92f66d9c6c889a9c2266832264d526a87b4"
+  },
+  "a4beb8e1d440ed0d6c3dd910d7fb871f4ef124eecec16eddf9745af61de34198": {
+    "fact_id": "a4beb8e1d440ed0d6c3dd910d7fb871f4ef124eecec16eddf9745af61de34198",
+    "field": "static",
+    "kind": "SPEC_REQUIRED_BINDING",
+    "postcondition_id": "SEM-SEAM-P3",
+    "required": {
+      "field": "static",
+      "node": "CURRENT_FRAME"
+    },
+    "site": "U-CALL/CALL",
+    "spec_revision": "586bb92f66d9c6c889a9c2266832264d526a87b4"
+  },
+  "bfc4d7c80515064cb4a4adbffbcd6e2f0fb1e826888614730ebe1a98b3887994": {
+    "fact_id": "bfc4d7c80515064cb4a4adbffbcd6e2f0fb1e826888614730ebe1a98b3887994",
+    "field": "stack",
+    "kind": "SPEC_REQUIRED_BINDING",
+    "postcondition_id": "SEM-SEAM-P15",
+    "required": {
+      "node": "EMPTY"
+    },
+    "site": "U-CALL/CALL",
+    "spec_revision": "586bb92f66d9c6c889a9c2266832264d526a87b4"
+  },
+  "d7970cbe52f107ff373ef7737eedd94fef61f86c5058092eb5449b12627a48ea": {
+    "fact_id": "d7970cbe52f107ff373ef7737eedd94fef61f86c5058092eb5449b12627a48ea",
+    "field": "storage_owner",
+    "kind": "SPEC_REQUIRED_BINDING",
+    "postcondition_id": "SEM-SEAM-P12",
+    "required": {
+      "field": "storage_owner",
+      "node": "CURRENT_FRAME"
+    },
+    "site": "U-CALL/DELEGATECALL",
+    "spec_revision": "586bb92f66d9c6c889a9c2266832264d526a87b4"
+  },
+  "d7fe46816da6f3a5ce7851108ec4678914410c1884a3c74b4d63a3dac97a7219": {
+    "fact_id": "d7fe46816da6f3a5ce7851108ec4678914410c1884a3c74b4d63a3dac97a7219",
+    "field": "stack",
+    "kind": "SPEC_REQUIRED_BINDING",
+    "postcondition_id": "SEM-SEAM-P15",
+    "required": {
+      "node": "EMPTY"
+    },
+    "site": "U-CALL/DELEGATECALL",
+    "spec_revision": "586bb92f66d9c6c889a9c2266832264d526a87b4"
+  },
+  "d82cc5ec56acc0b6906c0cdc90fbc832655d0fc2474c34e3991cc0f3b1a76540": {
+    "fact_id": "d82cc5ec56acc0b6906c0cdc90fbc832655d0fc2474c34e3991cc0f3b1a76540",
+    "field": "pc",
+    "kind": "SPEC_REQUIRED_BINDING",
+    "postcondition_id": "SEM-SEAM-P14",
+    "required": {
+      "node": "ZERO"
+    },
+    "site": "U-CALL/CALL",
+    "spec_revision": "586bb92f66d9c6c889a9c2266832264d526a87b4"
+  },
+  "d9c554423b67e86642b5150c7e4bef20ecb6d586d0bc73f051cb209b1c769b09": {
+    "fact_id": "d9c554423b67e86642b5150c7e4bef20ecb6d586d0bc73f051cb209b1c769b09",
+    "field": "returndata",
+    "kind": "SPEC_REQUIRED_BINDING",
+    "postcondition_id": "SEM-SEAM-P15",
+    "required": {
+      "node": "EMPTY"
+    },
+    "site": "U-CALL/STATICCALL",
+    "spec_revision": "586bb92f66d9c6c889a9c2266832264d526a87b4"
+  },
+  "dc1f170e4baabd4f59318456f921b22a86eb87a1af2ececd8396066f364f5709": {
+    "fact_id": "dc1f170e4baabd4f59318456f921b22a86eb87a1af2ececd8396066f364f5709",
+    "field": "memory",
+    "kind": "SPEC_REQUIRED_BINDING",
+    "postcondition_id": "SEM-SEAM-P15",
+    "required": {
+      "node": "EMPTY"
+    },
+    "site": "U-CALL/CALL",
+    "spec_revision": "586bb92f66d9c6c889a9c2266832264d526a87b4"
+  },
+  "dd19cbc72a93be518059cc0aa5cf7cdb5d828743bdf261d2a0a1d7d92d7d3e54": {
+    "fact_id": "dd19cbc72a93be518059cc0aa5cf7cdb5d828743bdf261d2a0a1d7d92d7d3e54",
+    "field": "pc",
+    "kind": "SPEC_REQUIRED_BINDING",
+    "postcondition_id": "SEM-SEAM-P14",
+    "required": {
+      "node": "ZERO"
+    },
+    "site": "U-CALL/STATICCALL",
+    "spec_revision": "586bb92f66d9c6c889a9c2266832264d526a87b4"
+  },
+  "e8456df65c549112ade9b351e2145558316e54dbbc7947295bd1d0861e8b8eef": {
+    "fact_id": "e8456df65c549112ade9b351e2145558316e54dbbc7947295bd1d0861e8b8eef",
+    "field": "pc",
+    "kind": "SPEC_REQUIRED_BINDING",
+    "postcondition_id": "SEM-SEAM-P14",
+    "required": {
+      "node": "ZERO"
+    },
+    "site": "U-CALL/DELEGATECALL",
+    "spec_revision": "586bb92f66d9c6c889a9c2266832264d526a87b4"
+  },
+  "f7376211e2fef7dfd0a09972ac5cb47845a7ce72a5d353a9f025323cb30a94ab": {
+    "fact_id": "f7376211e2fef7dfd0a09972ac5cb47845a7ce72a5d353a9f025323cb30a94ab",
+    "field": "memory",
+    "kind": "SPEC_REQUIRED_BINDING",
+    "postcondition_id": "SEM-SEAM-P15",
+    "required": {
+      "node": "EMPTY"
+    },
+    "site": "U-CALL/DELEGATECALL",
+    "spec_revision": "586bb92f66d9c6c889a9c2266832264d526a87b4"
+  }
+}

@@ -1,0 +1,14 @@
+{
+  "name": "e5-finding-certificates",
+  "private": true,
+  "version": "0.0.0",
+  "description": "E5 — replayable finding certificates. Bootstrap artifacts only; no producer, verifier or extractor body exists yet.",
+  "type": "module",
+  "license": "UNLICENSED",
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "typescript": "5.6.3"
+  }
+}
