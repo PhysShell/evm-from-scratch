@@ -1017,5 +1017,6 @@
     "column": 62
    }
   ]
- }
+ },
+ "file_order_is_not_frozen": "The files below appear alphabetically by repository-relative path, which is what the coverage extractor produced. Frozen Step 2 defines no total order BETWEEN files, and the choice is result-bearing \u2014 it changes which arm stops the branch search and which LT-BR-* IDs are realised. E1-v5 stopped on exactly that (STOP_PROTOCOL_ARM_ORDER_UNDERSPECIFIED). Nothing here should be read as the frozen order."
 }

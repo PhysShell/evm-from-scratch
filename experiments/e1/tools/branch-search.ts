@@ -1,9 +1,17 @@
 /**
  * Branch search — frozen Step 2 §8.2.2, run at step 6a under E1-v5.
  *
- * For each arm the 213 core tests leave uncovered, in frozen source order, enumerate
- * candidates from the §8.2.1 canonical stream for that unit's input record, up to B = 4096,
- * and take the FIRST that covers the arm.
+ * For each arm the 213 core tests leave uncovered, enumerate candidates from the §8.2.1
+ * canonical stream for that unit's input record, up to B = 4096, and take the FIRST that
+ * covers the arm.
+ *
+ * ORDER WARNING. §8.2.2 says "in frozen source order" and §8.2 allocates `LT-BR-*` "in
+ * ascending order of source position", but no frozen text defines a total order BETWEEN files.
+ * This tool iterates the order its input record supplies — alphabetical by repository-relative
+ * path — and that choice is result-bearing: it changes which arm stops the run and which
+ * `LT-BR-*` IDs are realised. Whatever this prints is an observation under that order, not the
+ * frozen procedure's verdict. E1-v5 stopped on exactly this
+ * (`STOP_PROTOCOL_ARM_ORDER_UNDERSPECIFIED`), and a successor must freeze a total order first.
  *
  *   covered within B      -> emit LT-BR-<unit>-<nnn>, inputs recorded verbatim
  *   not covered within B  -> NO_FROZEN_BRANCH_WITNESS: stop, preserve the record

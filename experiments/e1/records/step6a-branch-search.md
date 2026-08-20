@@ -11,10 +11,14 @@ produces `E1-v6`.
 [`E1-v5-STOP.md`](../../../docs/experiments/E1-v5-STOP.md) —
 `STOP_PROTOCOL_ARM_ORDER_UNDERSPECIFIED`.
 
-**Everything below §4 is an observation under the file order this implementation chose**, not
-the uniquely determined §8.2.2 result. Frozen Step 2 orders arms "by source position" but
-defines no total order BETWEEN files, and different admissible orders give different outcomes
-— §7 sets that out.
+**The §8.2.2 outcome in §4, and the stop it reached, are observations under the file order this
+implementation chose** — not the uniquely determined §8.2.2 result. Frozen Step 2 orders arms
+"by source position" but defines no total order BETWEEN files, and different admissible orders
+give different outcomes; §7 sets that out.
+
+Two things in this record are **not** order-dependent and are marked where they appear: the arm
+identity established in §3, and the observation in §5 about what the `jmp.ts` arm is, which
+concerns one arm rather than the sequence arms are visited in.
 
 ## 1. Provenance
 
@@ -180,22 +184,30 @@ An earlier execution of this same procedure — before the tool was corrected �
 arm instead of halting at the first exhausted one, and reached a `RangeError` in `U-MEM` at
 candidate 11, which under E1-v5 §3.10 is an evaluation stop.
 
-That run was wrong and its outcome is not this run's outcome. §8.2.2 halts at the **first** arm
-that exhausts `B`, and `src/jmp.ts:17:27` precedes `src/mem.ts` in frozen source order, so the
-correct stop is `NO_FROZEN_BRANCH_WITNESS`. The tool was corrected to halt where the frozen
-text says to halt, and re-run.
+That run was wrong in one respect only, and it is not the respect an earlier draft of this
+record claimed. It surveyed instead of halting, which §8.2.2 does not permit — that is the
+defect, and the tool was corrected to halt at the first arm that exhausts `B`.
 
-It is recorded because it is evidence about the frozen procedure rather than about the tool:
-**the §3.10 condition is reachable**, at a low candidate index, in a unit whose operand domain
-contains `2²⁵⁶ − 1`. A later version reaching `U-MEM` before exhausting an earlier arm will
-meet it, and §3.10 says what happens then — the run stops, the candidate index, arm and error
-class are preserved, and no next candidate is tried.
+**It was NOT wrong about which stop is correct, because no frozen text makes either stop
+correct.** An earlier draft said `src/jmp.ts:17:27` precedes `src/mem.ts` "in frozen source
+order, so the correct stop is `NO_FROZEN_BRANCH_WITNESS`". That contradicts §7 above and the
+whole v5 disposition: the inter-file order is not frozen, so there is no uniquely correct first
+stop to be right or wrong about. Under this implementation's order the corrected tool reaches
+`jmp.ts` first; under an order putting `mem.ts` earlier it would reach the `RangeError` first.
+Both are observations under an order the specification does not select.
+
+The `RangeError` observation is kept for what it does establish, which is order-independent:
+**the §3.10 condition is reachable**, at candidate 11, in a unit whose operand domain contains
+`2²⁵⁶ − 1`. It is not a theoretical clause. Any version whose order reaches `U-MEM` before
+exhausting an earlier arm will meet it, and §3.10 says what happens then — the run stops, the
+candidate index, arm and error class are preserved, and no next candidate is tried.
 
 ## 9. Scope
 
 **Nothing is established or refuted about boundary blindness.** No specimen was built, no
-defect was injected, no calibration figure exists. `M1` does not exist, and §7 makes it a
-precondition for any adjudicating figure.
+defect was injected, no calibration figure exists. `M1` does not exist, and **E1-v5 §7** — the
+preregistration's sequence, not §7 of this record — makes it a precondition for any adjudicating
+figure.
 
 **Clean Baseline B stands**, inherited and unmodified, carrying its recorded limitation: at
 least 4 case IDs incompletely realise 2 frozen postconditions
