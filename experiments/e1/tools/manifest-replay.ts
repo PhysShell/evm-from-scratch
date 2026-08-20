@@ -10,6 +10,7 @@
  * Exit 0 = every recomputed value matches M0. Exit 1 = at least one does not.
  */
 import { createHash } from 'node:crypto';
+import { buildDomain, soleTrailingJumpdest, SIGMA, PLAIN, TERMINALS } from './program-domain';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -36,6 +37,15 @@ interface M0 {
   freeze_merge_sha?: string;
   freeze_base_sha?: string;
   freeze_path?: string;
+  experiment_version?: string;
+  /** E1-v5 binding rule 5. `D_program` is a decision-rule input, so it is replayed. */
+  program_domain?: {
+    member_count: number;
+    sigma_size: number;
+    plain_blocks: number;
+    terminal_variants: number;
+    d_program_digest: string;
+  };
 }
 
 // Overridable so E1-v1's stopped manifest stays replayable for audit.
@@ -141,22 +151,45 @@ function git(args: string[]): { ok: boolean; out: string } {
  * satisfy a predicate parameterised by them. The manifest's declarations are checked
  * against these literals; the predicate is evaluated with the literals.
  */
-const FREEZE_BASE_SHA = 'fbef84cd4a925345d3aa65c2e02d9d7502bea787';
-const FREEZE_PATH = 'docs/experiments/E1-v3-preregistration.md';
+/**
+ * One row per version that defines a freeze event. `experiment_version` selects the row.
+ *
+ * The selector is manifest-supplied, and that is safe because every row is strict: a manifest
+ * that named the wrong version would be judged against that version's base and path, and its
+ * own freeze merge introduces neither. Mis-declaring fails the predicate; it cannot weaken it.
+ */
+const FREEZE_LITERALS: Record<string, { base: string; path: string; clause: string }> = {
+  'E1-v3': {
+    base: 'fbef84cd4a925345d3aa65c2e02d9d7502bea787',
+    path: 'docs/experiments/E1-v3-preregistration.md',
+    clause: 'E1-v3 §3.1',
+  },
+  'E1-v5': {
+    base: '8f5aaeda667b2fecd7963f53806811b24cc36607',
+    path: 'docs/experiments/E1-v5-preregistration.md',
+    clause: 'E1-v5 §4.1',
+  },
+};
 
 if (m0.freeze_merge_sha) {
   const freeze = m0.freeze_merge_sha;
-  console.log(`\nfreeze event ${freeze.slice(0, 12)} — E1-v3 §3.1`);
+  const literals = FREEZE_LITERALS[m0.experiment_version ?? ''];
+  if (literals === undefined) {
+    failures.push(`no frozen freeze literals for experiment_version ${m0.experiment_version}`);
+    console.log(`\nfreeze event: UNKNOWN VERSION ${m0.experiment_version}`);
+    process.exit(1);
+  }
+  console.log(`\nfreeze event ${freeze.slice(0, 12)} — ${literals.clause}`);
 
   // What the manifest DECLARES must equal the frozen literals...
-  check('manifest freeze_base_sha matches the frozen literal', m0.freeze_base_sha, FREEZE_BASE_SHA);
+  check('manifest freeze_base_sha matches the frozen literal', m0.freeze_base_sha, literals.base);
   if (m0.freeze_path !== undefined) {
-    check('manifest freeze_path matches the frozen literal', m0.freeze_path, FREEZE_PATH);
+    check('manifest freeze_path matches the frozen literal', m0.freeze_path, literals.path);
   }
 
   // ...and the predicate is evaluated with the literals, never with those declarations.
-  const base = FREEZE_BASE_SHA;
-  const path = FREEZE_PATH;
+  const base = literals.base;
+  const path = literals.path;
 
   // (a) exactly two parents
   const parents = git(['rev-list', '--parents', '-n1', freeze]);
@@ -184,6 +217,32 @@ if (m0.freeze_merge_sha) {
   check('freeze ordering: HEAD is a descendant of the freeze', git(['merge-base', '--is-ancestor', freeze, target]).ok, true);
 } else {
   console.log('\nfreeze event: not declared by this manifest (M0 / M0-v2 predate E1-v3 §3)');
+}
+
+// 6. `D_program` replay — E1-v5 binding rule 5.
+//
+//    The candidate domain is a decision-rule input exactly as the digests are, so it is
+//    recomputed from the frozen §3.2-§3.7 specification rather than trusted. The
+//    sole-trailing-jumpdest assertion is §3.9's proof made checkable: it is what bounds each
+//    frame at |Σ| + 1 dispatches and makes every jump forward.
+if (m0.program_domain) {
+  console.log('\nprogram domain — E1-v5 §3.7, binding rule 5');
+  const domain = buildDomain();
+  const hex = (u: Uint8Array): string => Buffer.from(u).toString('hex');
+  const digest = sha256(domain.map((mem) => `${mem.index}\t${mem.label}\t${hex(mem.code)}`).join('\n'));
+
+  check('|Σ| from Step 0 §1.1 + §1.2', SIGMA.length, m0.program_domain.sigma_size);
+  check('plain blocks per program', PLAIN.length, m0.program_domain.plain_blocks);
+  check('terminal variants', TERMINALS.length, m0.program_domain.terminal_variants);
+  check('|D_program|', domain.length, m0.program_domain.member_count);
+  check('d_program_digest', digest, m0.program_domain.d_program_digest);
+
+  const violations = domain.filter((mem) => !soleTrailingJumpdest(mem.code));
+  check(
+    `§3.9 sole trailing jumpdest, all ${domain.length} members`,
+    violations.map((mem) => mem.label),
+    [],
+  );
 }
 
 console.log(
