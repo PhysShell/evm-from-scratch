@@ -1460,11 +1460,33 @@ producer_outcome_A14e           CERTIFICATE | ABSTAIN(reason)
 Run-level:
 
 ```text
-e5_input_set                    the evaluated set, with the E1 commit it was read at
+run_id                          this run's identifier, as recorded in E5-M1
+previous_run_id                 the run this one succeeds, or null   (§14.3)
+extractor_revision              pinned per run
+producer_revision               pinned per run
+verifier_revision               pinned per run
+e5_input_set                    the evaluated set, with the commit it was read at
 claim_class_coverage            absence / misbinding, per §4.5
 e5_outcome                      one value from §12.2
 invalid_experiment_reason       null, or the specific G0/G4 clause
 ```
+
+**Why all three implementations are pinned per run.** The outcome depends on every one of
+them: the producer decides whether a certificate exists at all, the verifier decides whether
+it is accepted, and `FAIL_SOUNDNESS` and `FAIL_INDEPENDENCE` are properties of a *particular*
+verifier rather than of the architecture in the abstract. §12.3 deliberately permits repairing
+a defective producer and re-running under this same frozen document — which without a pinned
+per-run identity would allow
+
+```text
+run 1   producer P1, verifier V1   ->  FAIL
+        (implementations repaired)
+run 2   producer P2, verifier V2   ->  PASS
+```
+
+to be reported as though only one run had ever existed. §14.3 makes each such change a new
+run with its own `E5-M1`, and the `previous_run_id` chain makes the number of attempts
+visible. Re-running is allowed; re-running silently is not.
 
 `primary_verdict = NOT_PRODUCED` records the case where the honest producer **abstained** on
 the primary claim over a bundle the §8.5 test called `SUFFICIENT`. That is not a soundness
@@ -1484,6 +1506,17 @@ is the *correct* answer and `G6` has already routed the run to
 Evaluated in order. The first gate that fires decides the outcome and evaluation stops. One
 run, one outcome.
 
+**Standing rule — `NOT_APPLICABLE` satisfies nothing and violates nothing.** A case recorded
+`NOT_APPLICABLE` (§10.3) has no verdict, no `reason_code` and no producer outcome. It cannot
+fire a gate clause and cannot clear one; every clause below is read as quantifying over
+*applicable* cases only, and where a case is named by id the guard is written out in full.
+
+This rule is stated rather than assumed because an earlier revision lost exactly it. Fixing
+`A1` moved the dead branch one floor down instead of removing it: `G0` no longer fired on
+producer abstention, but `G3`'s unguarded `A15` clause read `NOT_APPLICABLE != VALID` as a
+soundness failure, and `G7` was still unreachable. The bug survived its own fix, so what is
+frozen here is the general rule and not another patched instance.
+
 ```text
 G0   protocol integrity                                  -> INVALID_EXPERIMENT
        any of:
@@ -1491,8 +1524,10 @@ G0   protocol integrity                                  -> INVALID_EXPERIMENT
          E5-M0 or E5-M1 missing, or written out of the order §14.3 requires
          a recorded specimen sha does not resolve, or its tree differs from
            the E1 M2 record it claims
-         the extractor was run more than once for a source revision, or its
-           revision differs from the one E5-M1 records
+         the extractor was run more than once for a source revision, or the
+           extractor, producer or verifier revision used differs from the one
+           E5-M1 records for this run_id (a changed revision requires a NEW
+           run, §14.3 — it is not a within-run substitution)
          a bundle digest differs from the one E5-M1 records
          an APPLICABLE mandatory case among A2..A17 could not be constructed
            — A1 is excluded: it is the primary observation, and its absence
@@ -1505,16 +1540,20 @@ G1   E5_INPUT_SET is empty                               -> BLOCKED_NO_ELIGIBLE_
 
 G2   any clause S1..S4 of §11.2 fails                    -> FAIL_INDEPENDENCE
 
-G3   any applicable rejecting case returned VALID
-     OR A15 returned anything but VALID
-     OR A12c, A14e or A16 returned a CERTIFICATE
+G3   any APPLICABLE rejecting case returned VALID
+     OR (A15 APPLICABLE AND A15 returned anything but VALID)
+     OR (A12c APPLICABLE AND A12c returned a CERTIFICATE)
+     OR (A14e APPLICABLE AND A14e returned a CERTIFICATE)
+     OR (A16  APPLICABLE AND A16  returned a CERTIFICATE)
      OR A12b's audit failed, incl. any of K1..K5 of §9.3 -> FAIL_SOUNDNESS
 
-G4   any applicable rejecting case returned INVALID with
+G4   any APPLICABLE rejecting case returned INVALID with
      a reason_code other than its preregistered one,
-     OR A12c abstained with a reason other than
-     NO_COMPLETENESS_WITNESS, or A14e for D2/D3 with a
-     reason other than BINDINGS_AGREE                    -> INVALID_EXPERIMENT
+     OR (A12c APPLICABLE AND A12c abstained with a reason
+         other than NO_COMPLETENESS_WITNESS),
+     OR (A14e APPLICABLE AND the specimen is D2 or D3 AND
+         A14e abstained with a reason other than
+         BINDINGS_AGREE)                                 -> INVALID_EXPERIMENT
 
 G5   any eligible specimen has
      sufficiency != SUFFICIENT                           -> FAIL_FACT_MODEL
@@ -1592,9 +1631,11 @@ act as a control, and E5 has one producer. Naming the outcome after what is obse
 feasible derivation was obtained — is the honest width.
 
 The remedy differs by sub-cause and is chosen by a human reading the record, not by this
-automaton: a defective producer is fixed and the run repeated under the same frozen document
-(the producer is not part of the freeze surface, §14.6); a genuinely inexpressive ruleset needs
-an `E5-v2` with a new ruleset id, never a rule added to `v1`.
+automaton: a defective producer is fixed and re-run **as a new E5 run** under the same frozen
+document — new `run_id`, new `E5-M1`, the earlier `FAIL_DERIVATION_FEASIBILITY` immutable in
+the chain (§14.3) — because the producer is not part of the freeze surface (§14.6); a genuinely
+inexpressive ruleset instead needs an `E5-v2` with a new ruleset id, never a rule added to
+`v1`.
 
 `INVALID_EXPECTED_CLAIM_INPUT` means less than any of them: E5 was handed a revision whose
 canonical facts contradict the defect the E1 catalog assigns to it. It is a statement about
@@ -1765,16 +1806,36 @@ E5-M1   input record            appended BEFORE the first verification run
     the commit at which E5_INPUT_SET was evaluated — REQUIRED to be the default
       branch's HEAD at the moment E5-M1 is written, so that eligibility cannot be
       read at a conveniently early commit that excludes an awkward specimen
+    run_id, and previous_run_id (null for the first run)
     E5_INPUT_SET, with each specimen's baseline and injected shas and M2 refs
     claim_class_coverage
-    the extractor revision
+    extractor_revision, producer_revision, verifier_revision — all three
+      pinned, because the outcome depends on all three (§12.1)
     the per-revision fact bundle digests, clean and injected
 ```
 
-One E5 run has exactly one `E5-M1`. If E1 later produces further eligible specimens, that is a
-**second E5 run**, with its own `E5-M1` and its own recorded outcome, under this same frozen
-document. Both results stand; neither replaces the other, and a later run may not be presented
-as a correction of an earlier one.
+One E5 run has exactly one `E5-M1`, and one `E5-M1` fixes one implementation-and-input
+identity. A **new run** — new `run_id`, new `E5-M1`, `previous_run_id` pointing at the run it
+succeeds — is required whenever any of these changes after a governed run:
+
+```text
+extractor_revision      producer_revision      verifier_revision
+E5_INPUT_SET            any fact bundle digest
+```
+
+All of this happens under this same frozen document; none of the three implementations is part
+of the freeze surface (§14.6). What is forbidden is not re-running but overwriting:
+
+```text
+an earlier run's recorded outcome is IMMUTABLE.
+A later run never replaces, corrects, or supersedes it. The result document
+reports the FULL previous_run_id chain, so a FAIL -> FAIL -> PASS sequence is
+visible as three runs and not as one success.
+```
+
+That chain is the only thing standing between "repair the producer and re-run" (legitimate)
+and re-running until something passes (fishing). It costs one field and it makes the attempt
+count a matter of record, in the same way the §14.2 topology log makes re-anchoring countable.
 
 There is no `E5-M2`. Per-specimen results are outputs, recorded under §12.1, not a manifest
 stage: nothing about a specimen needs fixing after `E5-M1` and before its measurement, so
@@ -1847,11 +1908,17 @@ choose after seeing a result:
 | producer / verifier boundary | §2, §9.1 |
 
 Deliberately **not** frozen: implementation language, file layout, digest library, test
-runner (§11.3) — and **the producer's implementation**. Its boundary and its obligations are
-frozen (§2.3, §9.1, and it may never write into the fact bundle, §10.5), but how it searches
-for a derivation is not: that is the whole "friendly proof producer" premise of §0.4, and it
-is why a defective producer is repaired and re-run under this same frozen document rather than
-requiring an `E5-v2` (§12.3).
+runner (§11.3) — and **the extractor, producer and verifier implementations themselves**. Their
+boundaries and obligations are frozen (§2.3, §5.6, §9.1, §9.3, and the producer may never write
+into the fact bundle, §10.5), but how the producer searches for a derivation is not: that is
+the whole "friendly proof producer" premise of §0.4, and it is why a defective producer is
+repaired and re-run under this same frozen document rather than requiring an `E5-v2` (§12.3).
+
+**Not frozen is not unpinned.** All three are pinned *per run* in `E5-M1`, and changing any of
+them after a governed run requires a new run whose `previous_run_id` names its predecessor
+(§14.3). The freeze fixes the protocol; the run identity fixes which implementations produced
+which recorded outcome. Confusing the two would let a repaired implementation quietly inherit
+an earlier run's record.
 
 ---
 
@@ -1962,8 +2029,13 @@ better one. So the blocker is recorded and E5 is frozen anyway.
    (§10.5). The adversarial matrix is honest about which of its rows are typed rejections.
 5. **If D1 is not eligible, the central invariant is only tested negatively** (§4.5). A
    `PASS` in that case must carry `absence: untested`.
-6. **E5 is single-run and small-n by construction.** At most three specimens. No statistical
-   claim of any kind is available, and none is made.
+6. **Each E5 run has exactly one frozen implementation-and-input identity, and no run
+   replaces another.** At most three specimens per run (§4.1). Multiple runs may legitimately
+   exist — a repaired producer or verifier, or a larger `E5_INPUT_SET` once E1 produces more
+   specimens — and each is recorded separately with its `previous_run_id` chain (§14.3).
+   Runs are **not** repeated trials of a random variable: each differs from its predecessor in
+   a recorded, deliberate way. No statistical claim of any kind is available, within a run or
+   across the chain, and none is made.
 7. **E5 depends on E1 for inputs and on nothing else.** It does not depend on E1 *succeeding*
    (§4.3). If E1-v5 stops after adjudicating at least one D-specimen, E5 is runnable; if it
    stops before, E5 is blocked. Neither is an E5 result.
