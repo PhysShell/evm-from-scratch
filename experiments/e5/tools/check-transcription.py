@@ -235,14 +235,21 @@ check("K1 — no bundle, map, parser or digest appears among the kernel's inputs
       params is not None and not any(re.search(r"digest|bundle|map|parser|Uint8Array", t, re.I) for t in params),
       f"declared = {params}")
 
-# K2 — TRANSITIVE closure of the kernel
+# K2 — TRANSITIVE closure of the kernel.
+#
+# NOTE: there is deliberately NO check on the shell -> kernel direction. The
+# shell is SUPPOSED to call the kernel after V1-V6, so forbidding that edge
+# would forbid the architecture §9.3 describes. A previous revision asserted it
+# anyway and, on finding it red, appended `or True` rather than deleting it —
+# producing a check that could never fail, sitting inside a suite whose whole
+# claim is that its checks can. Same defect as the K5 "plus its return type"
+# exemption: the test written to pass rather than to check. The frozen
+# constraint runs the other way and is checked below, over the closure.
 kclosure = closure("verifier-kernel")
 check("K2 — bundle-loader is not in the kernel's TRANSITIVE closure",
       "bundle-loader" not in kclosure, f"closure = {sorted(kclosure)}")
 check("K2 — verifier-shell is not in the kernel's transitive closure",
       "verifier-shell" not in kclosure, f"closure = {sorted(kclosure)}")
-check("K2 — the shell DOES sit outside the kernel (the split is real, §9.3)",
-      "verifier-kernel" not in closure("verifier-shell") or True)
 check("K2 — every module in the kernel closure is a pure type module",
       all(not re.search(r"^export declare function", ts(m), re.M) for m in kclosure),
       f"non-type modules in closure: {[m for m in kclosure if re.search(r'^export declare function', ts(m), re.M)]}")

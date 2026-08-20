@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "E5-CERT/v1",
   "title": "E5 derivation certificate",
-  "$comment": "Transcription of E5 preregistration §6.1, §6.2, §6.3. DELIBERATELY PERMISSIVE in three places so that the frozen rejection ladder of §9.2 stays reachable — see the $comment on schema_version, ruleset_id, conclusion and premises. Tightening any of them silently collapses a distinct reason code into MALFORMED_CERTIFICATE and is a transcription defect, not an improvement.",
+  "$comment": "Transcription of E5 preregistration §6.1, §6.2, §6.3. DELIBERATELY PERMISSIVE wherever the frozen ladder of §9.2 gives a condition its own reason code — enumerated rather than counted, because a count goes stale: schema_version (V2 UNKNOWN_SCHEMA_VERSION), ruleset_id (V3 UNKNOWN_RULESET), conclusion (V4 UNKNOWN_CONCLUSION_SHAPE), steps (V7 EMPTY_DERIVATION), rule_id (V8 UNKNOWN_RULE), premises (V9a PREMISE_ARITY_MISMATCH). Tightening any of them silently collapses a distinct reason code into MALFORMED_CERTIFICATE and is a transcription defect, not an improvement.",
 
   "type": "object",
   "properties": {

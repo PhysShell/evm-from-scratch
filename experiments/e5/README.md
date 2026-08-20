@@ -21,9 +21,21 @@ asserting weaker properties than the frozen document states, and review found
 three real defects sitting inside checks that were reporting `ok`. Run both:
 
 ```
-python3 tools/check-transcription.py           # 57 checks
+python3 tools/check-transcription.py           # 56 checks
 python3 tools/check-transcription-selftest.py  #  9 negative controls
 ```
+
+**The discipline that keeps the first number meaningful:** every assertion in
+`check-transcription.py` must be one a negative control can turn red. An
+assertion that cannot be made to fail is **deleted, not weakened** — and an
+assertion found to be red because it forbids something the frozen document
+permits is deleted too, rather than having a disjunct bolted onto it.
+
+Both failure modes have already happened here, and neither was caught by the
+suite reporting green: `K5` was once excused as "one function plus its return
+type", and a check on the shell → kernel direction — an edge §9.3 *requires* —
+was once kept alive with `or True`. In both cases the test had been written to
+pass rather than to check.
 
 ## Why these files exist before `E5-M0`
 
