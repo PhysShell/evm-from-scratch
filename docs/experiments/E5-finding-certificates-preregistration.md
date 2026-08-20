@@ -87,12 +87,30 @@ E5_DESIGN_CUTOFF_SHA = 8f5aaeda667b2fecd7963f53806811b24cc36607
 ```
 
 `H2` — the merge that closed the unfrozen E1-v4 history. The E5 branch is cut from this
-commit and **not** from the head of the in-flight E1-v5 work.
+commit and **not** from the head of the E1-v5 work that was in flight when E5 was designed.
 
 The reason is not procedural tidiness. E5 must choose its proof vocabulary, its completeness
 rules and its adversarial cases **before** anyone has seen which certificate is easiest to
 build. A vocabulary selected after seeing E1-v5's measurements would be a vocabulary selected
 to succeed.
+
+**`E5_DESIGN_CUTOFF_SHA` is not `freeze_base_sha`.** They answer different questions and are
+deliberately kept apart (§14.2):
+
+```text
+E5_DESIGN_CUTOFF_SHA   what was knowable to this document's author.
+                       An epistemic fact. NEVER changes — changing it would be a
+                       claim that E5 was designed with information it did not have.
+
+freeze_base_sha        which state of the default branch the freeze event is
+                       anchored to, topologically.
+                       A git fact. Changes only by the recorded successor
+                       procedure of §14.2, and changes nothing scientific.
+```
+
+An earlier revision of this document equated the two. That was convenient while the branch
+point and the merge base were the same commit, and wrong as soon as anything else landed
+first — see the topology amendment log in §14.2.
 
 ### 1.2 What was read
 
@@ -941,7 +959,7 @@ to look at is a property of the **ruleset**.
 serve a claim it committed to. It says nothing about whether the extractor faithfully
 reflected the source — which E5 cannot test at all (§2.2).
 
-### 8.6 Expected-claim status — the test that keeps `FAIL_EXPRESSIVITY` honest
+### 8.6 Expected-claim status — the test that keeps the last outcome honest
 
 Sufficiency deliberately declines to compare bindings. That leaves a case the outcome
 vocabulary must not misname. Consider an eligible D2 whose injected revision, for whatever
@@ -954,8 +972,8 @@ required = CURRENT_FRAME(address)
 
 Every fact is present, every payload is modelled, so `sufficiency = SUFFICIENT`. The honest
 producer then correctly answers `ABSTAIN(BINDINGS_AGREE)`: **according to the canonical facts
-there is no defect to certify.** Routing that to `FAIL_EXPRESSIVITY` would be false — the
-ruleset was not inexpressive, it had nothing to prove.
+there is no defect to certify.** Routing that to a derivation-failure outcome would be false
+— nothing failed to derive, there was nothing to derive.
 
 This is not a hypothetical corner. §4.3 requires the E1 witness counterfactual to have been
 *adjudicated*, not *satisfied*, precisely so that E5 never depends on an E1 outcome — which
@@ -1000,8 +1018,8 @@ Three outcomes therefore partition cleanly, and each names a different broken th
 ```text
 FAIL_FACT_MODEL              the facts needed are not there, or not modelled
 INVALID_EXPECTED_CLAIM_INPUT the facts are there and say the claim is false
-FAIL_EXPRESSIVITY            the facts are there and support the claim, and the
-                             frozen calculus still produced no valid derivation
+FAIL_DERIVATION_FEASIBILITY  the facts are there and support the claim, and no
+                             valid certificate for it was obtained
 ```
 
 ---
@@ -1218,11 +1236,63 @@ A `NOT_APPLICABLE` case is recorded as such and is not a failure. A case that is
 but could not be constructed **is** a failure, and yields `INVALID_EXPERIMENT` (§12.2 G0) —
 otherwise "we could not build the attack" would silently read as "the attack did not work".
 
+#### A1 is the primary observation, not an adversarial construction
+
+`A1` sits in the matrix for readability, but it is not an attack: it is the primary
+certificate being verified. Treating it as a mandatory *construction* created a dead branch in
+the automaton, and it is worth spelling out because it was live in an earlier revision:
+
+```text
+producer ABSTAIN  ->  no primary certificate exists
+                  ->  A1 "could not be constructed"
+                  ->  G0 INVALID_EXPERIMENT
+                  ->  G7 is never reached
+```
+
+which made `primary_verdict = NOT_PRODUCED` — a value added precisely to name the honest
+abstention — unreachable. So:
+
+```text
+primary_producer_outcome = CERTIFICATE
+    A1 is verified. Its verdict IS primary_verdict.
+
+primary_producer_outcome = ABSTAIN
+    A1                 = NOT_PRODUCED
+    primary_verdict    = NOT_PRODUCED
+    adjudication CONTINUES to G5 / G6 / G7. This is not a G0 condition.
+```
+
+#### Cases derived from the primary certificate
+
+The same defect reaches further than `A1`: most of the matrix mutates the primary certificate
+or its bundle, so if no primary certificate exists none of them can be built either. They are
+classified once, here, and their applicability is conditional:
+
+```text
+P-cases   consume the primary certificate
+          A1, A2, A3, A4, A5, A6a, A6b, A7, A8, A9a, A9b, A10, A11,
+          A12a, A13a, A13b, A13c, A14a, A14b, A15
+
+I-cases   independent of it — driven by a bundle and a producer
+          A12b, A12c, A14c, A14d, A14e, A16, A17
+
+If primary_producer_outcome = ABSTAIN for a specimen, every P-case for that
+specimen is NOT_APPLICABLE(NO_PRIMARY_CERTIFICATE) — recorded, not a failure.
+The I-cases still run.
+```
+
+**Abstention is not an escape hatch.** A producer cannot dodge the matrix by declining to
+emit: abstaining sets `primary_verdict = NOT_PRODUCED`, which reaches `G7` and therefore
+cannot reach `PASS`. And the I-cases that still run are exactly the ones that do not need a
+cooperative producer — the structural audit `A12b`, the adversarial producer's clean-baseline
+attempts `A14c`/`A14d`, and the starved-bundle cases `A16`/`A17`. A silent producer is scored,
+not excused.
+
 ### 10.4 The matrix
 
 | id | name | applies | the single variable, and the transform | expect |
 |---|---|---|---|---|
-| **A1** | positive replay | ALL | none — the primary bundle and the primary certificate, unmodified | `VALID` |
+| **A1** | positive replay — *the primary observation, not an attack (§10.3)* | ALL | none — the primary bundle and the primary certificate, unmodified. If the producer abstained, `NOT_PRODUCED`, and adjudication continues | `VALID` |
 | **A2** | deleted premise | ALL | *presence of one required fact.* Delete the fact bound to slot 1 of step `S1` (`SEAM_SITE`). Honest rebind (digest only; the reference is left dangling on purpose) | `INVALID(PREMISE_NOT_FOUND, 1)` |
 | **A3** | wrong site | ALL | *one premise's site.* Replace the `SEAM_SITE` fact at `S1` slot 1 with the `SEAM_SITE` fact for the next site in the frozen cyclic order `CALL → STATICCALL → DELEGATECALL → CALL`, same revision. Honest rebind **including repointing** | `INVALID(PREMISE_IDENTITY_MISMATCH, 1)` |
 | **A4** | wrong revision, fact-level | ALL | *one premise's `source_revision`.* Replace the `SEAM_SITE` fact at `S1` slot 1 with a copy identical except `source_revision` = the specimen's clean baseline sha. Honest rebind including repointing | `INVALID(REVISION_MISMATCH, 1)` |
@@ -1371,8 +1441,13 @@ expected_claim_status           EXPECTED_CLAIM_SUPPORTED
                                 | NOT_EVALUATED   (sufficiency != SUFFICIENT)
 primary_producer_outcome        CERTIFICATE | ABSTAIN(reason)
 primary_verdict                 VALID | INVALID(reason_code, step_index?) | NOT_PRODUCED
-adversarial_results             [{case_id, applicable, verdict, reason_code,
-                                  step_index, expected_reason_code, matched}]
+adversarial_results             [{case_id, class, applicable, not_applicable_reason,
+                                  verdict, reason_code, step_index,
+                                  expected_reason_code, matched}]
+                                class: P | I                            (§10.3)
+                                not_applicable_reason: null
+                                  | NOT_ELIGIBLE_D1 | FEWER_THAN_TWO_SPECIMENS
+                                  | NO_PRIMARY_CERTIFICATE
 producer_outcome_A16            CERTIFICATE | ABSTAIN(reason)
 producer_outcome_A12c           CERTIFICATE | ABSTAIN(reason) | NOT_APPLICABLE
 independence_S1..S4             pass | fail, each recorded separately (§11.2)
@@ -1398,10 +1473,11 @@ failure, because the facts were there and fully modelled. Without this value the
 would have had a hole: a run in which nothing was forged, nothing was missing, and nothing was
 proved.
 
-It reaches `FAIL_EXPRESSIVITY` (§12.2 `G7`) only when `expected_claim_status` is
+It reaches `FAIL_DERIVATION_FEASIBILITY` (§12.2 `G7`) only when `expected_claim_status` is
 `EXPECTED_CLAIM_SUPPORTED`. When the facts contradict the expected claim, the same abstention
 is the *correct* answer and `G6` has already routed the run to
-`INVALID_EXPECTED_CLAIM_INPUT` (§8.6).
+`INVALID_EXPECTED_CLAIM_INPUT` (§8.6). And per §10.3, an abstention makes the P-cases
+`NOT_APPLICABLE` rather than unconstructible, so `G0` no longer fires ahead of `G7`.
 
 ### 12.2 Aggregate outcome — a sequential automaton
 
@@ -1418,7 +1494,11 @@ G0   protocol integrity                                  -> INVALID_EXPERIMENT
          the extractor was run more than once for a source revision, or its
            revision differs from the one E5-M1 records
          a bundle digest differs from the one E5-M1 records
-         an APPLICABLE mandatory case (§10.3) could not be constructed
+         an APPLICABLE mandatory case among A2..A17 could not be constructed
+           — A1 is excluded: it is the primary observation, and its absence
+           under producer abstention is NOT_PRODUCED, not a protocol failure
+           (§10.3). P-cases are NOT_APPLICABLE, not unconstructible, when
+           there is no primary certificate
          this document was edited after the first governed E5 run (§14.4)
 
 G1   E5_INPUT_SET is empty                               -> BLOCKED_NO_ELIGIBLE_E1_INPUT
@@ -1443,8 +1523,9 @@ G6   any eligible specimen has expected_claim_status
      == EXPECTED_CLAIM_CONTRADICTED               (§8.6) -> INVALID_EXPECTED_CLAIM_INPUT
 
 G7   any eligible specimen has
-     primary_verdict != VALID                            -> FAIL_EXPRESSIVITY
-       (covers both INVALID and NOT_PRODUCED, §12.1)
+     primary_verdict != VALID                            -> FAIL_DERIVATION_FEASIBILITY
+       (covers both INVALID and NOT_PRODUCED, §12.1;
+        the sub-cause is RECORDED, not adjudicated — see §12.3)
 
 G8   otherwise                                           -> PASS
 ```
@@ -1462,14 +1543,14 @@ Why the order is this order, since a first-match automaton is only as good as it
   §2.3 value), because which fact the starved bundle is missing first is an extraction detail;
   A12c's and A14e's are pinned, because those two cases exist to test one specific reason each.
 - **`G4` above `G5`/`G6`.** If the matrix and the ladder disagree, the rejections are not
-  evidence about anything yet, and reading a fact-model or expressivity result out of them
-  would be reading a broken instrument.
+  evidence about anything yet, and reading a fact-model or derivation-feasibility result out
+  of them would be reading a broken instrument.
 - **`G5` above `G6` above `G7`.** These three are ordered by how far upstream the defect is,
   and their triggers are disjoint on a single specimen by construction: `G6` is evaluated only
   where `sufficiency = SUFFICIENT`, and `G7` only where the expected claim is *supported*
   (§8.6). The ordering resolves the remaining case — different specimens firing different
-  gates — in favour of naming the most upstream broken thing. A run cannot be called
-  inexpressive while one of its inputs is contradicting its own catalog entry.
+  gates — in favour of naming the most upstream broken thing. A run cannot be reported as a
+  derivation failure while one of its inputs is contradicting its own catalog entry.
 
 ### 12.3 What `PASS` means, and what it does not
 
@@ -1492,11 +1573,28 @@ Why the order is this order, since a first-match automaton is only as good as it
 - that the absence invariant was exercised, unless `claim_class_coverage` records `absence`
   as covered (§4.5).
 
-`FAIL_EXPRESSIVITY` is likewise narrow, and §8.6 is what makes the words accurate: it says the
-frozen `E5-RULES/v1` could not express an acceptable derivation for a claim whose facts were
-present, fully modelled, **and actually supported the claim**. It is not a result about
-proof-carrying findings in general, and it is repaired by an `E5-v2` with a new ruleset id,
-never by adding a rule to `v1`.
+`FAIL_DERIVATION_FEASIBILITY` is likewise narrow, and §8.6 is what makes the words accurate.
+It says: the facts were present, fully modelled, and actually supported the expected claim, and
+**no valid certificate for that claim was obtained** — nothing more.
+
+It deliberately does **not** say why. Two sub-causes are recorded and neither is adjudicated:
+
+```text
+primary_verdict = NOT_PRODUCED    the producer abstained
+primary_verdict = INVALID(code)   the producer emitted a certificate the verifier rejected
+```
+
+An earlier revision called this outcome `FAIL_EXPRESSIVITY`, which asserted more than E5 can
+measure: a producer that simply emits a malformed derivation would have been reported as a
+frozen calculus that "could not express" the claim, when the calculus may be fine. Separating
+producer failure from ruleset inexpressivity needs a second, independently written producer to
+act as a control, and E5 has one producer. Naming the outcome after what is observed — no
+feasible derivation was obtained — is the honest width.
+
+The remedy differs by sub-cause and is chosen by a human reading the record, not by this
+automaton: a defective producer is fixed and the run repeated under the same frozen document
+(the producer is not part of the freeze surface, §14.6); a genuinely inexpressive ruleset needs
+an `E5-v2` with a new ruleset id, never a rule added to `v1`.
 
 `INVALID_EXPECTED_CLAIM_INPUT` means less than any of them: E5 was handed a revision whose
 canonical facts contradict the defect the E1 catalog assigns to it. It is a statement about
@@ -1556,7 +1654,7 @@ was the commit that *first introduced* the path. `M` is therefore now **computed
 history**, not declared.
 
 ```text
-freeze_base_sha := 8f5aaeda667b2fecd7963f53806811b24cc36607     (= E5_DESIGN_CUTOFF_SHA)
+freeze_base_sha := f670258f1e7ef4cf6adbeddeac5a81f4cf981487     (see the log below)
 doc_path        := docs/experiments/E5-finding-certificates-preregistration.md
 
 M is the unique commit reachable from the default branch's tip satisfying ALL of:
@@ -1577,11 +1675,33 @@ E5_FROZEN(c) iff
   3.  no commit in M..c modifies doc_path.
 ```
 
-Every clause is a `git` command. `(b)` anchors the freeze to the design cutoff this document
-already names in §1.1, so the anchor is a value the document itself carries rather than one a
-later manifest supplies. `(c)`/`(d)` make `M` the introducing merge and not merely *a* merge.
-`(e)` forbids altering the document while merging it. `(f)` is what closes the substitution
-above: a second candidate does not let someone pick; it stops E5.
+Every clause is a `git` command. `(b)` anchors the freeze to a commit **this document names
+in its own text**, so the anchor is carried by the frozen artifact rather than supplied by a
+later manifest. `(c)`/`(d)` make `M` the introducing merge and not merely *a* merge. `(e)`
+forbids altering the document while merging it. `(f)` is what closes the substitution above:
+a second candidate does not let someone pick; it stops E5.
+
+#### Topology amendment log
+
+`freeze_base_sha` may be changed **only** by the successor procedure below, and every change
+is logged here. The log exists so that re-anchoring is countable: a document that had quietly
+re-anchored five times would be visibly not frozen at all.
+
+| # | `freeze_base_sha` | why it was set / superseded |
+|---|---|---|
+| 1 | `8f5aaeda667b2fec…` | initial value, equated with `E5_DESIGN_CUTOFF_SHA`. **Superseded**: the E1-v5 PR merged first, landing `f670258f…` on `main` as an ordinary merge with first parent `8f5aaed…`. Clause `(b)` became unsatisfiable for any future merge. |
+| 2 | `f670258f1e7ef4cf…` | current. The tip of `main` after that merge. |
+
+The supersession was executed under the successor rule this section already carried, before
+any freeze occurred and before any E5 implementation existed, and it changed **no scientific
+surface**: `E5_DESIGN_CUTOFF_SHA`, the `spec_revision` blob shas of §1.2, the fact model, the
+ruleset, the skeletons, the adversarial matrix and the decision rule are all untouched. It is
+a git fact catching up with git.
+
+Verified at the time of the amendment, because clause `(f)` deserves a check rather than an
+assumption: `f670258f…` itself is **not** a candidate for `M`. It has two parents and its first
+parent is `8f5aaed…`, so it passes `(a)`–`(c)`, but `doc_path` is absent at its second parent,
+so `(d)` fails. It cannot be mistaken for this document's introducing merge.
 
 `E5-M0` still records `M` and the document's blob sha, but now as **audit values that must
 equal the computed ones**. A recorded value disagreeing with the computation is
@@ -1589,18 +1709,29 @@ equal the computed ones**. A recorded value disagreeing with the computation is
 
 **Two operational consequences, and they are binding.**
 
-1. **This PR must merge before the in-flight E1-v5 PR.** Clause `(b)` requires `M^1` to be
-   exactly `8f5aaed`. Once any other merge lands on the default branch first, no commit can
-   satisfy `(b)` and this document becomes unfreezable as written.
+1. **This document's merge must be the next change to the default branch.** Clause `(b)`
+   requires `M^1` to be exactly `freeze_base_sha`. If any other merge lands first, no commit
+   can satisfy `(b)` and this document becomes unfreezable as written. The merge must also be
+   an ordinary two-parent merge — no squash, no rebase, no fast-forward (§14.1).
 2. **If that ordering is missed, E5 is not re-anchored quietly.** The remedy is a new reviewed
    revision of this preregistration naming a new `freeze_base_sha`, opened as an explicit
-   successor with the reason recorded — the same shape E1-v4-STOP established. Silently
-   re-pointing `freeze_base_sha` after the fact would reintroduce exactly the defect this
-   section exists to remove.
+   successor, with the reason recorded in the log above — the same shape E1-v4-STOP
+   established. Silently re-pointing `freeze_base_sha` after the fact would reintroduce
+   exactly the defect this section exists to remove.
 
-The cost is real: a stricter predicate has more ways to become unsatisfiable, and it couples
-E5's freeze to a merge ordering. That cost is accepted, because the alternative is a freeze
-whose anchor can be chosen after the edits it is supposed to forbid.
+**The branch is not rebased when this happens.** Re-anchoring changes which commit `M^1` must
+be, not where the work was authored. Rebasing the E5 branch onto the new base would rewrite
+the commits and destroy the provenance that this document was written at
+`E5_DESIGN_CUTOFF_SHA` — which is the one thing §1.3 rests on. An ordinary merge of the
+unrebased branch produces `M^1 = freeze_base_sha` and `M^2 = the branch head` with no rewrite
+at all.
+
+The cost is real: a stricter predicate has more ways to become unsatisfiable, it couples E5's
+freeze to a merge ordering, and it has already cost one recorded re-anchoring. That cost is
+accepted, because the alternative is a freeze whose anchor can be chosen after the edits it is
+supposed to forbid. Note also what the log makes visible: re-anchoring is cheap for *topology*
+and impossible for *content* — no successor may move `E5_DESIGN_CUTOFF_SHA`, so no successor
+can buy the author later knowledge.
 
 ### 14.3 Two manifests, append-only
 
@@ -1611,7 +1742,10 @@ condition, not a licence to revise the earlier stage.
 ```text
 E5-M0   protocol manifest      written AFTER the freeze merge M,
                                BEFORE any extractor or verifier run
-    E5_DESIGN_CUTOFF_SHA, which is also freeze_base_sha              (§14.2)
+    E5_DESIGN_CUTOFF_SHA                                            (§1.1)
+    freeze_base_sha, and the topology amendment log as of the freeze (§14.2)
+      — a DISTINCT value from the design cutoff; equating them is the defect
+      recorded as log entry 1
     M, the COMPUTED freeze merge sha, together with the (a)-(f) evidence
       — recorded as an audit value that must equal the computed one, never
       as the thing that selects it                                    (§14.2)
@@ -1713,7 +1847,11 @@ choose after seeing a result:
 | producer / verifier boundary | §2, §9.1 |
 
 Deliberately **not** frozen: implementation language, file layout, digest library, test
-runner (§11.3).
+runner (§11.3) — and **the producer's implementation**. Its boundary and its obligations are
+frozen (§2.3, §9.1, and it may never write into the fact bundle, §10.5), but how it searches
+for a derivation is not: that is the whole "friendly proof producer" premise of §0.4, and it
+is why a defective producer is repaired and re-run under this same frozen document rather than
+requiring an `E5-v2` (§12.3).
 
 ---
 
@@ -1832,7 +1970,7 @@ better one. So the blocker is recorded and E5 is frozen anyway.
 
 ### 17.3 A null result is a result
 
-`FAIL_SOUNDNESS`, `FAIL_EXPRESSIVITY`, `FAIL_INDEPENDENCE`, `FAIL_FACT_MODEL`,
+`FAIL_SOUNDNESS`, `FAIL_DERIVATION_FEASIBILITY`, `FAIL_INDEPENDENCE`, `FAIL_FACT_MODEL`,
 `INVALID_EXPECTED_CLAIM_INPUT` and `BLOCKED_NO_ELIGIBLE_E1_INPUT` are all preserved and
 written up. Redesign after seeing a
 result belongs to an `E5-v2` and a new preregistration document, never to an edit of this one.
