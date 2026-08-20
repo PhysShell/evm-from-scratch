@@ -1,0 +1,85 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "E5-CERT/v1",
+  "title": "E5 derivation certificate",
+  "$comment": "Transcription of E5 preregistration §6.1, §6.2, §6.3. DELIBERATELY PERMISSIVE wherever the frozen ladder of §9.2 gives a condition its own reason code — enumerated rather than counted, because a count goes stale: schema_version (V2 UNKNOWN_SCHEMA_VERSION), ruleset_id (V3 UNKNOWN_RULESET), conclusion (V4 UNKNOWN_CONCLUSION_SHAPE), steps (V7 EMPTY_DERIVATION), rule_id (V8 UNKNOWN_RULE), premises (V9a PREMISE_ARITY_MISMATCH). Tightening any of them silently collapses a distinct reason code into MALFORMED_CERTIFICATE and is a transcription defect, not an improvement.",
+
+  "type": "object",
+  "properties": {
+    "schema_version": {
+      "$comment": "NOT const. V1 checks the certificate parses; V2 separately checks schema_version == 'E5-CERT/v1' -> UNKNOWN_SCHEMA_VERSION. A const here would make V2 unreachable.",
+      "type": "string"
+    },
+    "ruleset_id": {
+      "$comment": "NOT const. V3 checks ruleset_id == the embedded ruleset's id -> UNKNOWN_RULESET. A const here would make V3 unreachable, and would break adversarial case A10's sibling reasoning.",
+      "type": "string"
+    },
+    "spec_revision": { "$ref": "#/$defs/GitObjectSha" },
+    "source_revision": { "$ref": "#/$defs/GitObjectSha" },
+    "fact_bundle_digest": { "$ref": "#/$defs/Sha256Hex" },
+    "conclusion": { "$ref": "#/$defs/Proposition" },
+    "steps": {
+      "type": "array",
+      "$comment": "NO minItems. §6.2 calls steps 'ordered, non-empty', but non-emptiness is checked at V7 -> EMPTY_DERIVATION, which runs AFTER V1. A minItems here would report an empty derivation as MALFORMED_CERTIFICATE and make V7 unreachable — the same defect as a const schema_version. An earlier revision had minItems: 1 with a $comment calling the overlap 'harmless'; that reasoning was wrong, and it is exactly the reasoning that collapses a distinct reason code.",
+      "items": { "$ref": "#/$defs/ProofStep" }
+    }
+  },
+  "required": ["schema_version", "ruleset_id", "spec_revision", "source_revision", "fact_bundle_digest", "conclusion", "steps"],
+  "additionalProperties": false,
+
+  "$defs": {
+    "Sha256Hex": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "GitObjectSha": {
+      "$comment": "Git object name (SHA-1, 40 hex): commit sha for source_revision, blob sha for spec_revision (§5.1). Sha256Hex is only for E5-computed digests (§5.5).",
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "FactId": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+
+    "Proposition": {
+      "$comment": "DELIBERATELY STRUCTURAL, NOT a oneOf over P1..P4 of §6.1. V4 checks that the conclusion is a well-formed instance of a frozen shape -> UNKNOWN_CONCLUSION_SHAPE. Validating the four shapes here would make V4 unreachable and would report a bad conclusion as MALFORMED_CERTIFICATE. The four shapes and their fields are carried in E5-RULES-v1.json under 'propositions'; V4 reads them from there.",
+      "type": "object",
+      "properties": { "shape": { "type": "string" } },
+      "required": ["shape"]
+    },
+
+    "ProofStep": {
+      "type": "object",
+      "properties": {
+        "rule_id": {
+          "$comment": "NOT an enum. V8 checks membership in the embedded ruleset -> UNKNOWN_RULE. An enum here would make V8 unreachable and would report adversarial case A10 as MALFORMED_CERTIFICATE.",
+          "type": "string"
+        },
+        "premises": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/PremiseRef" },
+          "$comment": "No length constraint. Arity is checked per rule at V9a -> PREMISE_ARITY_MISMATCH (adversarial case A9a)."
+        },
+        "derived": {
+          "$ref": "#/$defs/Proposition",
+          "$comment": "The producer's claim. NEVER authority: the verifier recomputes it at V9h and compares -> STEP_PROPOSITION_MISMATCH (adversarial case A8)."
+        }
+      },
+      "required": ["rule_id", "premises", "derived"],
+      "additionalProperties": false
+    },
+
+    "PremiseRef": {
+      "$comment": "§6.2. The 'must be < this step's index' rule is NOT expressed here: it is V9b -> PREMISE_FORWARD_REFERENCE. Only 1-basedness is structural.",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": { "fact": { "$ref": "#/$defs/FactId" } },
+          "required": ["fact"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": { "step": { "type": "integer", "minimum": 1 } },
+          "required": ["step"],
+          "additionalProperties": false
+        }
+      ]
+    }
+  }
+}
