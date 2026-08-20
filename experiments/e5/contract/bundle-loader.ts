@@ -13,22 +13,20 @@
  *   3. constructs a FactResolver over that private map.
  *
  * K5 (§9.3, mechanical): this module exports EXACTLY ONE symbol, with exactly
- * this signature, and no other operation over the map escapes it.
+ * the signature `load(bytes) -> (FactResolver, digest)`. The return shape is
+ * written inline rather than as a named exported interface: an exported
+ * `LoadedBundle` would be a second exported symbol, and K5 says one. An earlier
+ * revision exported both, and the checker excused it as "one function plus its
+ * return type" — a weakening that appears nowhere in the frozen document.
  *
- * This module is deliberately NOT imported by verifier-kernel.ts (K2). It is
+ * This module is deliberately NOT in the kernel's dependency closure (K2). It is
  * also the one residual review obligation in the whole design (§9.3, §17.2):
- * K1-K5 make the kernel structurally incapable of enumerating the bundle, but
+ * K1–K5 make the kernel structurally incapable of enumerating the bundle, but
  * nothing mechanical proves that `load`'s body computes the digest it claims.
  * That is one function with one signature and no other job — a residue, not an
- * elimination. Closing it fully would need a verified toolchain, which E5 does
- * not have and does not claim.
+ * elimination.
  */
 import type { FactResolver } from "./fact-resolver";
 
-export interface LoadedBundle {
-  resolver: FactResolver;
-  /** sha256(JCS(bundle)) — §5.5, lowercase hex. */
-  digest: string;
-}
-
-export declare function load(bytes: Uint8Array): LoadedBundle;
+/** `digest` is sha256(JCS(bundle)) — §5.5, lowercase hex. */
+export declare function load(bytes: Uint8Array): { resolver: FactResolver; digest: string };

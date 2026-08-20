@@ -11,7 +11,19 @@ transcription** of it. They may not add, remove, widen or improve anything. A
 disagreement between a file here and the document is a defect *here*.
 
 `tools/check-transcription.py` re-derives the frozen tables from the document
-and diffs them against these artifacts. Run it before trusting any of this.
+and diffs them against these artifacts.
+
+`tools/check-transcription-selftest.py` is the reason to believe it. It
+reintroduces each defect the checker claims to catch and asserts the checker
+*fails* on the intended assertion. A checker that only ever reports green is
+decorative — and this one was: an earlier revision reported 39/39 while
+asserting weaker properties than the frozen document states, and review found
+three real defects sitting inside checks that were reporting `ok`. Run both:
+
+```
+python3 tools/check-transcription.py           # 57 checks
+python3 tools/check-transcription-selftest.py  #  9 negative controls
+```
 
 ## Why these files exist before `E5-M0`
 
@@ -33,14 +45,29 @@ protocol violation rather than an edit.
 | `schema/E5-CERT-v1.schema.json` | §6.1, §6.2, §6.3 |
 | `ruleset/E5-RULES-v1.json` | §6.1, §7.2, §7.4, §9.4 |
 | `spec-facts/E5-SPEC-FACTS-v1.json` | §5.4 — the 27 frozen spec facts |
-| `contract/facts.ts`, `propositions.ts`, `certificate.ts` | §5, §6 — data types |
+| `contract/facts.ts`, `propositions.ts`, `certificate.ts`, `verdict.ts` | §5, §6, §9.4 — data types |
 | `contract/fact-resolver.ts` | §3.3, §9.3 — the capability boundary |
 | `contract/bundle-loader.ts` | §3.3, §9.3 — exported surface only |
-| `contract/verifier-kernel.ts` | §9.1–§9.4 — entry signature only |
+| `contract/verifier-kernel.ts` | §9.3 — V7–V10 entry signature only |
+| `contract/verifier-shell.ts` | §9.2 — V1–V6 front-end signature only |
+| `tools/check-transcription.py` | re-derives the frozen tables and diffs them |
+| `tools/check-transcription-selftest.py` | negative controls proving the above can fail |
 
-`contract/*.ts` are **declarations, no bodies**. That is deliberate: `M0` then
+`contract/*.ts` are **declarations, no bodies** — every value is behind
+`declare`, so nothing here emits runtime code. That is deliberate: `M0` then
 pins the *contract* rather than the *code*, so writing the bodies later does not
 invalidate `M0`.
+
+### Where the ladder is split
+
+§9.3 puts V7–V10 and the rule engine in the **kernel**, which receives exactly
+`(Certificate, FactResolver)` and, in §3.3's words, "has no name for the bundle,
+the map, the parser or the digest". Everything earlier — V1 parse, V2
+`schema_version`, V3 `ruleset_id`, V4 conclusion shape, V5 parse bundle, V6
+digest comparison — is the **shell**. That is why `BundleLoader` returns
+`(resolver, digest)`: the shell keeps the digest for V6 and passes only the
+resolver inward. A kernel that took the digest as a parameter would breach K1
+even though a digest is only a string.
 
 ## What is deliberately NOT here
 
@@ -100,6 +127,23 @@ The verifier must therefore use ahead-of-time generated validation code (e.g.
 Ajv's standalone mode, with the generated source committed), or a non-compiling
 validator, or hand-written structural checks. This does not constrain the
 *producer* or the *extractor*, which are outside the independence surface.
+
+## For `E5-M0`: the artifact digest method
+
+`E5-M0` must record, in its own text, that
+
+> **artifact digest method = SHA-256 over exact file bytes.**
+
+This is deliberately *not* JCS. §5.5's JCS+SHA-256 governs `fact_id` and
+`fact_bundle_digest` — values whose whole purpose is stability under
+re-serialization. §14.3 asks only for "a digest over the ruleset artifact" and
+"the schema digests", and there the opposite property is wanted: an artifact
+digest should be byte-exact, so that reformatting the ruleset invalidates it
+rather than silently preserving identity.
+
+Recording the method explicitly is what stops a later reader deciding to
+"canonicalize" these JSON files and arriving at a different identity for the
+same object.
 
 ## Next steps, in order
 

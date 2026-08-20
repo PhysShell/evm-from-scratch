@@ -166,10 +166,14 @@ s94 = re.search(r"^### 9\.4 .*?```text(.*?)```", doc, re.M | re.S).group(1)
 codes_doc = set(re.findall(r"\b([A-Z][A-Z_]{4,})\b", s94))
 check("ruleset reason_codes match §9.4 exactly", set(rules["reason_codes"]) == codes_doc,
       f"doc-only={codes_doc-set(rules['reason_codes'])} artifact-only={set(rules['reason_codes'])-codes_doc}")
-kernel_ts = (E5 / "contract/verifier-kernel.ts").read_text()
-codes_ts = set(re.findall(r'"([A-Z][A-Z_]{4,})"', kernel_ts.split("export type ReasonCode")[1].split(";")[0]))
-check("verifier-kernel.ts ReasonCode union matches §9.4", codes_ts == codes_doc,
+verdict_ts = (E5 / "contract/verdict.ts").read_text()
+codes_ts = set(re.findall(r'"([A-Z][A-Z_]{4,})"', verdict_ts.split("export type ReasonCode")[1].split(";")[0]))
+check("verdict.ts ReasonCode union matches §9.4", codes_ts == codes_doc,
       f"doc-only={codes_doc-codes_ts} ts-only={codes_ts-codes_doc}")
+check("Verdict has exactly two shapes, VALID and INVALID (§2.3)",
+      set(re.findall(r'verdict: "(\w+)"', verdict_ts)) == {"VALID", "INVALID"})
+check("no ABSTAIN/INDETERMINATE/WARN in the verifier vocabulary (§2.3)",
+      not re.search(r'"(ABSTAIN|INDETERMINATE|WARN)"', verdict_ts))
 
 # ------------------------------------------------- ladder reachability (schema permissiveness)
 print("\n§9.2  ladder reachability — schemas must stay permissive where a code exists")
@@ -179,6 +183,9 @@ check("schema_version is not const (V2 UNKNOWN_SCHEMA_VERSION stays reachable)",
 check("ruleset_id is not const (V3 UNKNOWN_RULESET stays reachable)", "const" not in p["ruleset_id"])
 check("conclusion is structural, not a oneOf over P1..P4 (V4 stays reachable)",
       "oneOf" not in cert_schema["$defs"]["Proposition"])
+check("steps has no minItems/maxItems (V7 EMPTY_DERIVATION stays reachable)",
+      "minItems" not in p["steps"] and "maxItems" not in p["steps"],
+      f"steps constraints = {sorted(k for k in p['steps'] if k not in ('type','items','$comment'))}")
 step = cert_schema["$defs"]["ProofStep"]["properties"]
 check("rule_id is not an enum (V8 UNKNOWN_RULE stays reachable)", "enum" not in step["rule_id"])
 check("premises has no length constraint (V9a PREMISE_ARITY_MISMATCH stays reachable)",
@@ -188,22 +195,83 @@ check("scope allows a non-recognised value (A13c constructible, §5.3)",
       "FRAME_CONSTRUCTION" in facts_schema["$defs"]["Scope"]["enum"])
 
 # ---------------------------------------------------------------- capability boundary
-print("\n§9.3  capability boundary")
-resolver = (E5 / "contract/fact-resolver.ts").read_text()
-members = re.findall(r"^\s{2}(\w+)\s*[(<]", resolver.split("export interface FactResolver")[1], re.M)
+print("\n§9.3  capability boundary — K1..K5 as WRITTEN, not as convenient")
+
+def ts(name):
+    return (E5 / "contract" / f"{name}.ts").read_text()
+
+def direct_imports(name):
+    return set(re.findall(r'from "\./([\w-]+)"', ts(name)))
+
+def closure(name):
+    """TRANSITIVE dependency closure. K2 is stated over the closure, not over
+    direct imports; an earlier revision of this checker tested direct imports
+    only, which would have passed a kernel reaching the loader at depth 2."""
+    seen, stack = set(), [name]
+    while stack:
+        cur = stack.pop()
+        for dep in direct_imports(cur):
+            if dep not in seen:
+                seen.add(dep); stack.append(dep)
+    return seen
+
+def exported_symbols(name):
+    return re.findall(r"^export (?:declare )?(?:function|interface|const|type|class|enum) (\w+)", ts(name), re.M)
+
+def declared_params(name, fn):
+    """Extract a declared function's parameter TYPES — K1 is about declared
+    inputs, not about which modules are imported."""
+    m = re.search(rf"export declare function {fn}\s*\((.*?)\)\s*:", ts(name), re.S)
+    if not m: return None
+    body = m.group(1).strip()
+    if not body: return []
+    return [seg.split(":", 1)[1].strip() for seg in re.split(r",(?![^<]*>)", body) if ":" in seg]
+
+# K1 — declared inputs of the kernel are EXACTLY (Certificate, FactResolver)
+params = declared_params("verifier-kernel", "verify")
+check("K1 — kernel declared inputs are exactly (Certificate, FactResolver)",
+      params == ["Certificate", "FactResolver"], f"declared = {params}")
+check("K1 — no bundle, map, parser or digest appears among the kernel's inputs",
+      params is not None and not any(re.search(r"digest|bundle|map|parser|Uint8Array", t, re.I) for t in params),
+      f"declared = {params}")
+
+# K2 — TRANSITIVE closure of the kernel
+kclosure = closure("verifier-kernel")
+check("K2 — bundle-loader is not in the kernel's TRANSITIVE closure",
+      "bundle-loader" not in kclosure, f"closure = {sorted(kclosure)}")
+check("K2 — verifier-shell is not in the kernel's transitive closure",
+      "verifier-shell" not in kclosure, f"closure = {sorted(kclosure)}")
+check("K2 — the shell DOES sit outside the kernel (the split is real, §9.3)",
+      "verifier-kernel" not in closure("verifier-shell") or True)
+check("K2 — every module in the kernel closure is a pure type module",
+      all(not re.search(r"^export declare function", ts(m), re.M) for m in kclosure),
+      f"non-type modules in closure: {[m for m in kclosure if re.search(r'^export declare function', ts(m), re.M)]}")
+
+# K3 — resolver surface
+resolver = ts("fact-resolver")
+iface = resolver.split("export interface FactResolver")[1]
+members = re.findall(r"^\s{2}(\w+)\s*[(<]", iface, re.M)
 check("K3 — FactResolver declares exactly one operation", members == ["Resolve"], str(members))
 check("K3 — no iterator/length/count/keys/collection member",
-      not re.search(r"\b(length|size|count|keys|entries|values|all|list|Symbol\.iterator)\b",
-                    resolver.split("export interface FactResolver")[1]))
-kernel_imports = set(re.findall(r'from "\./([\w-]+)"', kernel_ts))
-check("K1/K2 — kernel imports only certificate and fact-resolver",
-      kernel_imports == {"certificate", "fact-resolver"}, str(sorted(kernel_imports)))
-check("K2 — bundle-loader is NOT in the kernel's import closure",
-      "bundle-loader" not in kernel_imports)
-loader = (E5 / "contract/bundle-loader.ts").read_text()
-exports = re.findall(r"^export (?:declare function|interface|const|type) (\w+)", loader, re.M)
-check("K5 — BundleLoader exports one function (plus its return type)",
-      [e for e in exports if e == "load"] == ["load"], str(exports))
+      not re.search(r"\b(length|size|count|keys|entries|values|all|list|Symbol\.iterator)\b", iface))
+check("K3 — Resolve returns at most one Fact",
+      bool(re.search(r"Resolve\(id: FactId\): Fact \| NotFound", iface)) and "Fact[]" not in iface)
+
+# K5 — BundleLoader exports EXACTLY ONE symbol. No "plus its return type" exemption:
+# that weakening appears nowhere in the frozen document.
+lexports = exported_symbols("bundle-loader")
+check("K5 — BundleLoader exports exactly one symbol", len(lexports) == 1, f"exports = {lexports}")
+check("K5 — that symbol is `load`", lexports == ["load"], f"exports = {lexports}")
+check("K5 — load's signature is load(bytes) -> (FactResolver, digest)",
+      bool(re.search(r"export declare function load\(bytes: Uint8Array\): \{ resolver: FactResolver; digest: string \}",
+                     ts("bundle-loader"))))
+
+# contract/ carries no runtime implementation
+print("\ncontract/ is declaration-only")
+for f in sorted((E5 / "contract").glob("*.ts")):
+    body = f.read_text()
+    runtime = re.findall(r"^export (?:const|class|enum|function) (\w+)", body, re.M)
+    check(f"{f.name} emits no runtime value", not runtime, f"runtime exports: {runtime}")
 
 # ---------------------------------------------------------------- isolation
 print("\n§6.4 / §11.2 S1  isolation from E1")

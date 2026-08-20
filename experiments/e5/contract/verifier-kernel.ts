@@ -1,44 +1,28 @@
 /**
- * VerifierKernel entry signature — §9.1, §9.2, §9.3.
+ * VerifierKernel entry signature — §9.3.
  *
  * DECLARATION ONLY. No body exists yet, and none may run before E5-M0 is
  * committed (§14.3, §14.5).
  *
- * K1 (§9.3, mechanical): the kernel's declared inputs are EXACTLY
+ * SCOPE: the kernel is ladder steps V7–V10 and the rule engine. Steps V1–V6 —
+ * including the V6 bundle-digest comparison — belong to the shell
+ * (./verifier-shell), which is why the loader returns a digest alongside the
+ * resolver.
+ *
+ * K1 (§9.3, mechanical): the declared inputs are EXACTLY
  * (Certificate, FactResolver). The bundle type, the map type, the parser module
- * and the digest module do not appear among them.
+ * and the digest module do not appear among them. §3.3 puts it plainly: the
+ * kernel "has no name for the bundle, the map, the parser or the digest" — so a
+ * digest parameter is a breach of K1 even though it is only a string. An earlier
+ * revision of this file took a third `bundleDigest` argument and was wrong.
  *
- * K2 (§9.3, mechanical): this module's transitive dependency closure must not
- * contain bundle-loader.ts, the bundle/map type, the parser, or the digest
- * implementation. It imports ./certificate and ./fact-resolver and nothing else.
- *
- * The verifier's output vocabulary is exactly two shapes (§2.3). There is no
- * ABSTAIN, no INDETERMINATE, no WARN: abstention is a right of the PRODUCER,
- * which may decline to claim. A checker handed a certificate has been asked a
- * closed question and must answer it deterministically on the bytes it was given.
+ * K2 (§9.3, mechanical): this module's TRANSITIVE dependency closure must not
+ * contain bundle-loader, the bundle/map type, the parser, or the digest
+ * implementation.
  */
 import type { Certificate } from "./certificate";
 import type { FactResolver } from "./fact-resolver";
+import type { Verdict } from "./verdict";
 
-/** §9.4 — closed set. There is no OTHER and no UNKNOWN_ERROR. */
-export type ReasonCode =
-  | "MALFORMED_CERTIFICATE" | "UNKNOWN_SCHEMA_VERSION" | "UNKNOWN_RULESET"
-  | "UNKNOWN_CONCLUSION_SHAPE" | "MALFORMED_BUNDLE" | "BUNDLE_DIGEST_MISMATCH"
-  | "EMPTY_DERIVATION" | "UNKNOWN_RULE" | "PREMISE_ARITY_MISMATCH"
-  | "PREMISE_NOT_FOUND" | "PREMISE_FORWARD_REFERENCE" | "FACT_ID_NOT_CONTENT_DERIVED"
-  | "REVISION_MISMATCH" | "PREMISE_KIND_MISMATCH" | "PREMISE_IDENTITY_MISMATCH"
-  | "RULE_PRECONDITION_UNSATISFIED" | "STEP_PROPOSITION_MISMATCH" | "CONCLUSION_MISMATCH";
-
-export type Verdict =
-  | { verdict: "VALID" }
-  | { verdict: "INVALID"; reason_code: ReasonCode; step_index?: number };
-
-/**
- * Deterministic on identical input bytes (§9.1). The digest is passed in
- * because the kernel may not compute it: that is the loader's job (§3.3).
- */
-export declare function verify(
-  certificate: Certificate,
-  resolver: FactResolver,
-  bundleDigest: string
-): Verdict;
+/** Deterministic on identical inputs (§9.1). */
+export declare function verify(certificate: Certificate, resolver: FactResolver): Verdict;

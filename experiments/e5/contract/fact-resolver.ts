@@ -19,7 +19,12 @@
  */
 import type { Fact, FactId } from "./facts";
 
-export const NOT_FOUND = Symbol("NOT_FOUND");
+/**
+ * Declaration only: `declare` emits no runtime value, so this file — like every
+ * other file under contract/ — contains no implementation. The implementing
+ * module supplies the actual symbol.
+ */
+export declare const NOT_FOUND: unique symbol;
 export type NotFound = typeof NOT_FOUND;
 
 export interface FactResolver {

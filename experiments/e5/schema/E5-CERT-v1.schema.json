@@ -20,8 +20,7 @@
     "conclusion": { "$ref": "#/$defs/Proposition" },
     "steps": {
       "type": "array",
-      "minItems": 1,
-      "$comment": "minItems 1 restates §6.2 'ordered, non-empty'. V7 also checks non-emptiness -> EMPTY_DERIVATION; the overlap is harmless because a zero-step certificate is malformed under either reading, and no other case reaches V7.",
+      "$comment": "NO minItems. §6.2 calls steps 'ordered, non-empty', but non-emptiness is checked at V7 -> EMPTY_DERIVATION, which runs AFTER V1. A minItems here would report an empty derivation as MALFORMED_CERTIFICATE and make V7 unreachable — the same defect as a const schema_version. An earlier revision had minItems: 1 with a $comment calling the overlap 'harmless'; that reasoning was wrong, and it is exactly the reasoning that collapses a distinct reason code.",
       "items": { "$ref": "#/$defs/ProofStep" }
     }
   },
