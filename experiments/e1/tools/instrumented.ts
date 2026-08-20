@@ -4,7 +4,11 @@
  * The search has to answer "does THIS candidate cover THAT arm", one candidate at a time.
  * Jest's coverage answers it for a whole suite, so it cannot be used here. This loads the
  * production modules through `istanbul-lib-instrument` — the same instrumenter jest's
- * coverage stack is built on — so the arm identities match the discovery run's.
+ * coverage stack is built on, so both enumerate the same arms in the same order.
+ *
+ * Their POSITIONS do not correspond: this instruments transpiled JavaScript while jest
+ * reports TypeScript. Arms are therefore matched by order, and `checkAlignment` verifies that
+ * correspondence rather than assuming it.
  *
  * Production code is not modified: it is transpiled and instrumented in memory.
  */
@@ -41,14 +45,10 @@ function load(name: string): Record<string, unknown> {
     },
     fileName: file,
   });
-  // The instrumenter is fed the transpiled JS, so without the source map every arm would be
-  // located in generated code. Passing the map makes the branchMap positions TypeScript
-  // positions — the same ones the jest discovery run reports, which is what lets an arm from
-  // `records/step6a-uncovered-arms.json` be matched to an arm here.
-  // istanbul does NOT rewrite positions from the map — it stores the map in the coverage
-  // object so that a LATER remap can move the coverage back to the untranspiled source. So
-  // branchMap positions here are generated-JS positions, and `armIndex()` below does the
-  // remap that turns them into the TypeScript positions the discovery run reports.
+  // The map is passed because istanbul stores it in the coverage object, where a consumer
+  // that wants source positions can use it. It does NOT rewrite branchMap positions, so the
+  // positions here remain generated-JS positions — which is why arms are aligned to the
+  // discovery run by ORDER (`armsByFile` / `checkAlignment`) and not by position.
   const inputSourceMap = out.sourceMapText === undefined
     ? undefined
     : (JSON.parse(out.sourceMapText) as Record<string, unknown>);
@@ -74,26 +74,6 @@ export function loadAll(): Record<string, Record<string, unknown>> {
 
 const coverageVar = (): Record<string, Coverage> =>
   ((globalThis as unknown as Record<string, unknown>)['__e1_coverage__'] ?? {}) as Record<string, Coverage>;
-
-/** `file#branchId#armIndex` for every arm the instrumenter knows about. */
-export function armKeys(): string[] {
-  const keys: string[] = [];
-  for (const [path, cov] of Object.entries(coverageVar())) {
-    for (const [id, counts] of Object.entries(cov.b)) {
-      counts.forEach((_, k) => keys.push(`${path}#${id}#${k}`));
-    }
-  }
-  return keys;
-}
-
-export interface ArmLocation {
-  key: string;
-  file: string;
-  line: number;
-  column: number;
-  type: string;
-  arm: number;
-}
 
 /**
  * Ordered arms per file: `{ key, type }` in enumeration order.
@@ -134,28 +114,6 @@ export function checkAlignment(
     if (!ours || ours.length !== types.length || ours.some((a, i) => a.type !== types[i])) bad.push(file);
   }
   return bad;
-}
-
-/** Arm identities in the same (file, line, column, type, arm) shape the discovery run emits. */
-export function armLocations(rootRelative: (p: string) => string): ArmLocation[] {
-  const out: ArmLocation[] = [];
-  for (const [path, cov] of Object.entries(coverageVar())) {
-    for (const [id, counts] of Object.entries(cov.b)) {
-      const meta = cov.branchMap[id]!;
-      counts.forEach((_, k) => {
-        const loc = meta.locations?.[k] ?? meta.loc;
-        out.push({
-          key: `${path}#${id}#${k}`,
-          file: rootRelative(path),
-          line: loc.start.line,
-          column: loc.start.column,
-          type: meta.type,
-          arm: k,
-        });
-      });
-    }
-  }
-  return out;
 }
 
 /** Snapshot of every arm's hit count, for before/after comparison around one candidate. */
