@@ -292,32 +292,35 @@ scoped to the wrong subject — and that is exactly why §10 attacks it four way
 
 ### 3.3 Structural enforcement — no quantification over the bundle
 
-The rule above would be worth little if the verifier could reach the bundle directly. So:
+The rule above would be worth little if the verifier could reach the bundle directly. So it
+is not given it:
 
-> **The verifier's rule engine never receives the fact bundle.** It receives a single frozen
-> resolution interface `resolve(fact_id) -> Fact | NOT_FOUND`, and may call it only on
-> `fact_id` values that appear explicitly in the certificate.
+> **The verifier kernel never receives the fact bundle.** It receives a `Certificate` and an
+> opaque `FactResolver` whose entire surface is `Resolve(fact_id) -> Fact | NOT_FOUND`, and it
+> may call it only on `fact_id` values that appear explicitly in the certificate.
 
-The verifier as a whole touches the bundle in exactly three places, all outside the rule
-engine:
+The bundle is held by exactly one module, `BundleLoader`, which does exactly three things and
+hands the kernel none of them:
 
-1. parsing the bundle bytes into a `fact_id -> Fact` map (a duplicate key is a parse
+1. parses the bundle bytes into a private `fact_id -> Fact` map (a duplicate key is a parse
    failure, §9.2 V5);
-2. computing the bundle digest over the canonical serialization (§5.5);
-3. serving `resolve` for explicitly referenced ids.
+2. computes the bundle digest over the canonical serialization (§5.5);
+3. constructs the `FactResolver` over that private map.
 
-No search, no filtering, no counting, no "is there a fact such that…". Consequently there is
-no expressible computation by which the verifier could observe that something is *missing*
-and conclude anything from it — the only thing a missing referenced id can produce is
+The kernel therefore has no search, no filter, no count, no "is there a fact such that…" —
+not because it declines to, but because it has no name for the collection. There is no
+expressible computation by which it could observe that something is *missing* and conclude
+anything from it; the only thing a missing referenced id can produce is
 `INVALID(PREMISE_NOT_FOUND)`.
 
-Kernel checks `K1` and `K2` in §9.3 make this checkable rather than asserted, and §12.2 `G3`
-makes a failure of either a soundness failure rather than a note.
+§9.3 freezes that architecture and gives it five mechanical checks, `K1`–`K5`. §12.2 `G3`
+makes a breach of any of them a soundness failure rather than a note.
 
-**One permitted exception, narrowly stated.** Bundle-wide checks that can *only* produce
-`INVALID` — parse well-formedness and digest recomputation — are not inferences and are
-allowed. The rule is: **the verifier may quantify over the bundle only in ways that can
-never satisfy a premise or license a conclusion.**
+**One permitted exception, narrowly stated.** The loader's two bundle-wide computations —
+parse well-formedness and digest recomputation — can *only* produce `INVALID`. They are not
+inferences and are allowed. The rule is: **the verifier may quantify over the bundle only in
+ways that can never satisfy a premise or license a conclusion**, and §9.3 confines every such
+quantification to one module that returns no facts.
 
 **And one thing that looks like a violation and is not.** The fact-sufficiency test of §8.5
 *does* quantify over the bundle: it asks whether any fact fills a slot. It is run by the E5
@@ -932,12 +935,74 @@ constraints, never runs its preconditions, and never compares bindings.
 
 That boundary is what stops one input producing two outcomes. Everything the sufficiency test
 looks at is a property of the **fact model and extraction contract**; everything it declines
-to look at is a property of the **ruleset**. `FAIL_FACT_MODEL` and `FAIL_EXPRESSIVITY`
-therefore partition rather than overlap (§12.2).
+to look at is a property of the **ruleset**.
 
 **And note what `FAIL_FACT_MODEL` is not.** It says E5's own frozen fact model failed to
 serve a claim it committed to. It says nothing about whether the extractor faithfully
 reflected the source — which E5 cannot test at all (§2.2).
+
+### 8.6 Expected-claim status — the test that keeps `FAIL_EXPRESSIVITY` honest
+
+Sufficiency deliberately declines to compare bindings. That leaves a case the outcome
+vocabulary must not misname. Consider an eligible D2 whose injected revision, for whatever
+reason, carries
+
+```text
+actual   = CURRENT_FRAME(address)
+required = CURRENT_FRAME(address)
+```
+
+Every fact is present, every payload is modelled, so `sufficiency = SUFFICIENT`. The honest
+producer then correctly answers `ABSTAIN(BINDINGS_AGREE)`: **according to the canonical facts
+there is no defect to certify.** Routing that to `FAIL_EXPRESSIVITY` would be false — the
+ruleset was not inexpressive, it had nothing to prove.
+
+This is not a hypothetical corner. §4.3 requires the E1 witness counterfactual to have been
+*adjudicated*, not *satisfied*, precisely so that E5 never depends on an E1 outcome — which
+means a specimen whose injection did not do what the catalog says is **not excluded by
+construction**, and E5 must have a name for it.
+
+So a second frozen classification is evaluated per specimen, after `sufficiency = SUFFICIENT`
+and **before any producer is invoked**. It compares the facts filling the skeleton slots
+against payloads this document has already written down in §8.2–§8.4 — nothing new is chosen
+here:
+
+```text
+D1   the CONSTRUCTION_WRITES_COMPLETE fact filling S1 slot 2 has
+        scope           == FRAME_CONSTRUCTION
+        static          ∉  recorded_fields
+     the FRAME_FIELD_DEFAULT fact filling S2 slot 2 has
+        default         == LITERAL_BOOL(false)
+
+D2   the CONSTRUCTION_WRITE fact filling S1 slot 2 has
+        bound_to        == CALLEE_ADDRESS
+
+D3   the CONSTRUCTION_WRITE fact filling S1 slot 2 has
+        bound_to        == CALLEE_ADDRESS
+
+EXPECTED_CLAIM_SUPPORTED       every comparison above holds
+EXPECTED_CLAIM_CONTRADICTED    any of them does not
+```
+
+The `SPEC_REQUIRED_BINDING` side needs no comparison: §5.4 freezes all 27 spec facts, so the
+required bindings are fixed by this document and the only variable is what the extractor
+found in the source.
+
+`EXPECTED_CLAIM_CONTRADICTED` routes to its own outcome, `INVALID_EXPECTED_CLAIM_INPUT`
+(§12.2 G6). It is an **input-integrity** result: the E1 record says this revision carries
+defect `Dn`, and the canonical facts extracted from it say otherwise. The two live causes are
+an injection that did not do what Step 0 §6 describes, and an extractor that misread the
+source — and E5 can distinguish neither, which is exactly why it must not dress the situation
+up as a result about certificates.
+
+Three outcomes therefore partition cleanly, and each names a different broken thing:
+
+```text
+FAIL_FACT_MODEL              the facts needed are not there, or not modelled
+INVALID_EXPECTED_CLAIM_INPUT the facts are there and say the claim is false
+FAIL_EXPRESSIVITY            the facts are there and support the claim, and the
+                             frozen calculus still produced no valid derivation
+```
 
 ---
 
@@ -966,11 +1031,11 @@ The verifier:
 - is deterministic on identical input bytes.
 
 **No LOC threshold is imposed.** A line count is a target to be gamed, not a property. The
-kernel's smallness is instead pinned by its *obligations* (the list above), its *computational*
-constraints (§9.3 `K1`/`K2`) and its *dependency surface* (§11.2 `S1`–`S4`): a checker that must
-not search, must not read source, must not touch the bundle outside three named places, and
-must not import three named trees has very little room to be large — and all but one of the
-checks that enforce those facts are mechanical.
+kernel's smallness is instead pinned by its *obligations* (the list above), its *capability
+boundary* (§9.3 `K1`–`K5`) and its *dependency surface* (§11.2 `S1`–`S4`): a checker that must
+not search, must not read source, is never handed the bundle at all, and must not import three
+named trees has very little room to be large — and every one of the checks that enforce those
+facts is mechanical.
 
 ### 9.2 Rejection ladder — a sequential automaton
 
@@ -1019,25 +1084,75 @@ rebinding the digest stops at `V6` and never exercises the check it was built to
 is why §10.1's honest-rebind rule exists, and why `A11` — the one case that *deliberately*
 skips the rebind — is paired with `A15`, which performs it.
 
-### 9.3 Kernel structural checks
+### 9.3 The capability boundary, and the kernel checks
 
-Checks on the verifier *as an artifact*. They are what make §3.3 structural rather than
-promised, and they are adjudicated under the soundness gate (§12.2 G3, via A12b) — they
-constrain what the kernel may **compute**, whereas §11.2 constrains what it may **reach**.
+An earlier draft asked a reviewer to confirm by eye that the verifier "performs no iteration,
+filtering, counting, searching or aggregation over the bundle". That put the whole
+closed-domain guarantee of §3 — every machine-checked layer above it — on a human reading a
+program for the absence of a behaviour. The guarantee is now **structural**: the kernel is
+not given anything it could enumerate.
+
+**The frozen architecture.**
 
 ```text
-K1   the rule engine module does not receive the fact bundle. Its only bundle
-       access is the frozen `resolve(fact_id) -> Fact | NOT_FOUND` interface (§3.3),
-       and the bundle type does not appear among its declared inputs
-K2   the verifier performs no iteration, filtering, counting, searching or
-       aggregation over the bundle other than the three uses named in §3.3:
-       parsing it into a map, computing its digest, and serving `resolve`
+BundleLoader                       the ONLY module that ever holds the bundle
+    parse bytes -> private map     (a duplicate fact_id is a parse failure, §9.2 V5)
+    compute the bundle digest      (§5.5)
+    construct a FactResolver over the private map
+    return exactly (FactResolver, digest)
+         │
+         ▼
+FactResolver                       an OPAQUE capability, not a collection
+    Resolve(FactId) -> Fact | NOT_FOUND        <- its entire surface
+         │
+         ▼
+VerifierKernel                     ladder V7..V10 and the rule engine
+    receives exactly (Certificate, FactResolver)
+    has no name for the bundle, the map, the parser or the digest
 ```
 
-`K1` is mechanical: a module's declared inputs are inspectable. `K2` is a **declared code
-review against this checklist, recorded verbatim in the result** (§12.1). That asymmetry is
-stated rather than hidden — `K2` is the one obligation in this document backed by review
-rather than by a tool, and a reader should weigh it accordingly.
+The kernel cannot enumerate the bundle for the same reason a program cannot read a file it
+has no handle to: it never receives one. "No search over the bundle" stops being a promise
+about what the code does and becomes a fact about what it was handed.
+
+**The checks.** Adjudicated under the soundness gate (§12.2 G3, via A12b), because a breach
+here is a breach of §3, not of independence.
+
+```text
+K1   VerifierKernel's declared inputs are exactly (Certificate, FactResolver).
+       The bundle type, the map type, the parser module and the digest module do
+       not appear among its declared inputs                            MECHANICAL
+
+K2   VerifierKernel's transitive dependency closure does not contain the
+       BundleLoader module, the bundle/map type, the parser, or the digest
+       implementation                                                  MECHANICAL
+
+K3   the FactResolver interface declares EXACTLY ONE operation,
+       `Resolve(FactId) -> Fact | NOT_FOUND`. It exposes no iterator, no
+       length or count, no key set, no collection-valued member, and no
+       operation returning more than one Fact                          MECHANICAL
+
+K4   VerifierKernel's closure contains no reflection, dynamic member access,
+       dynamic import, or serialization round-trip that could reach past the
+       FactResolver interface (§11.2 S2 category (v))                  MECHANICAL
+
+K5   BundleLoader exports exactly one symbol, with exactly the signature
+       `load(bytes) -> (FactResolver, digest)`, and no other operation over the
+       map escapes the module                                          MECHANICAL
+```
+
+**What review is still left, stated exactly.** `K1`–`K5` are all mechanically inspectable, and
+together they mean the kernel *cannot* quantify over the bundle whatever its body says. What
+they do not do is prove that `load`'s body computes the digest it claims — that is one small
+function with one exported signature and no other job, and it is the residue. It is recorded
+in the result as `loader_review_statement` (§12.1) and it is honestly a residue, not an
+elimination: closing it fully would need a verified toolchain, which E5 does not have and does
+not claim. The point of this section is that the residue is now a dozen lines of a loader
+rather than the whole checker.
+
+**No meta-validator.** `K1`–`K5` are read off declared types, module closures and exported
+surfaces. E5 does not build a validator for the validator; it makes the dangerous capability
+absent instead of policing its use.
 
 ### 9.4 Reason code vocabulary — closed
 
@@ -1121,7 +1236,7 @@ otherwise "we could not build the attack" would silently read as "the attack did
 | **A10** | unknown rule | ALL | *the final step's `rule_id`.* Replace it with `R99_NOT_A_RULE` | `INVALID(UNKNOWN_RULE)` |
 | **A11** | bundle digest mismatch | ALL | *the bundle bytes, with the binding left stale.* Insert one unreferenced fact and **do not** rebind the digest | `INVALID(BUNDLE_DIGEST_MISMATCH)` |
 | **A12a** | absence without completeness witness | D1 | *presence of the completeness witness.* Delete the `CONSTRUCTION_WRITES_COMPLETE` fact; rebind the digest; leave the conclusion and the reference in place | `INVALID(PREMISE_NOT_FOUND, 1)` |
-| **A12b** | no negative path exists — static audit | ALL | *not a certificate.* Audit the frozen ruleset: no rule derives a negative proposition without a `CONSTRUCTION_WRITES_COMPLETE` premise; and the kernel checks `K1`/`K2` of §9.3 hold | audit passes |
+| **A12b** | no negative path exists — static audit | ALL | *not a certificate.* Audit the frozen ruleset: no rule derives a negative proposition without a `CONSTRUCTION_WRITES_COMPLETE` premise; and the capability-boundary checks `K1`–`K5` of §9.3 hold | audit passes |
 | **A12c** | honest producer on a silent bundle | D1 | *presence of the completeness witness, at the producer.* The A16 starved bundle, at the real producer, asking for the primary claim. This is A16 **with the abstention reason pinned**, not a second transform | `ABSTAIN(NO_COMPLETENESS_WITNESS)` |
 | **A13a** | forged witness — wrong site | D1 | *the witness's site.* Replace it with the witness for `U-CALL/CALL`, same revision, same scope; repoint; honest rebind | `INVALID(PREMISE_IDENTITY_MISMATCH, 1)` |
 | **A13b** | forged witness — wrong revision | D1 | *the witness's `source_revision`.* Same site and scope, clean-baseline revision; repoint; honest rebind | `INVALID(REVISION_MISMATCH, 1)` |
@@ -1196,25 +1311,30 @@ certificate verdict is interpreted (§12.2 G2).
 ```text
 S1   the verifier's transitive module closure contains no path under
        experiments/e1/, the producer tree, or the extractor tree
-S2   that closure references nothing in these four frozen categories:
+S2   that closure references nothing in these five frozen categories:
        (i)    network access of any kind
        (ii)   process creation or shell invocation
        (iii)  dynamic code evaluation, or code loading not resolvable statically
        (iv)   filesystem WRITE of any kind
+       (v)    reflection, dynamic member access, or serialization round-trip
+              used to reach past a declared interface       (cf. §9.3 K4)
        E5-M0 records the language-specific identifiers realising exactly these
-       four categories, and adds no fifth
+       five categories, and adds no sixth
 S3   two runs, in two different working directories, over identical input bytes,
        yield byte-identical (verdict, reason_code, step_index) for every certificate
 S4   the clean-room run yields, for every certificate, the same
        (verdict, reason_code, step_index) as the in-repository run
 ```
 
-All four are mechanical. The kernel's *computational* constraints — that it cannot quantify
-over the bundle — are `K1`/`K2` in §9.3 and are adjudicated under soundness, not here. `S1`–`S4`
-govern what the verifier may **reach**; `K1`/`K2` govern what it may **compute**. Mixing them
-would let a failure of one be reported under the other's name.
+All four are mechanical. The kernel's *capability* constraints — that it is never handed
+anything it could enumerate — are `K1`–`K5` in §9.3 and are adjudicated under soundness, not
+here. `S1`–`S4` govern what the verifier may **reach**; `K1`–`K5` govern what it may **hold**.
+Mixing them would let a failure of one be reported under the other's name.
 
-The four `S2` categories are enumerated here rather than deferred to `E5-M0` for the obvious
+Category `(v)` is the independence-side companion of §9.3 `K4`: the capability boundary is
+only structural if the kernel cannot reflect its way around the interface it was given.
+
+The five `S2` categories are enumerated here rather than deferred to `E5-M0` for the obvious
 reason: a deny-list chosen after the freeze is a deny-list chosen by whoever needs it short.
 
 Failure of any clause yields `FAIL_INDEPENDENCE`.
@@ -1224,7 +1344,9 @@ Failure of any clause yields `FAIL_INDEPENDENCE`.
 The verifier's implementation language, file layout, digest *library*, and test runner are
 deliberately left open. None of them is a tuning surface: no choice among them can change
 which certificates verify, because the ladder (§9.2), the ruleset (§7), the canonicalization
-and the digest *function* (§5.5) are all fixed. `S1`–`S5` are language-agnostic.
+and the digest *function* (§5.5) are all fixed. `S1`–`S4` and `K1`–`K5` are language-agnostic:
+each is stated over declared inputs, module closures, exported surfaces and interface shapes,
+all of which every plausible implementation language exposes.
 
 ---
 
@@ -1244,6 +1366,9 @@ injected_bundle_digest          sha256
 clean_bundle_digest             sha256
 primary_certificate_digest      sha256 of the certificate bytes, or null
 sufficiency                     SUFFICIENT | INSUFFICIENT_KIND | INSUFFICIENT_PAYLOAD
+expected_claim_status           EXPECTED_CLAIM_SUPPORTED
+                                | EXPECTED_CLAIM_CONTRADICTED
+                                | NOT_EVALUATED   (sufficiency != SUFFICIENT)
 primary_producer_outcome        CERTIFICATE | ABSTAIN(reason)
 primary_verdict                 VALID | INVALID(reason_code, step_index?) | NOT_PRODUCED
 adversarial_results             [{case_id, applicable, verdict, reason_code,
@@ -1251,8 +1376,9 @@ adversarial_results             [{case_id, applicable, verdict, reason_code,
 producer_outcome_A16            CERTIFICATE | ABSTAIN(reason)
 producer_outcome_A12c           CERTIFICATE | ABSTAIN(reason) | NOT_APPLICABLE
 independence_S1..S4             pass | fail, each recorded separately (§11.2)
-kernel_K1                       pass | fail                              (§9.3)
-kernel_K2_review_statement      the verbatim recorded review             (§9.3)
+kernel_K1..K5                   pass | fail, each recorded separately (§9.3)
+loader_review_statement         the verbatim recorded review of BundleLoader,
+                                  the one residual review obligation   (§9.3)
 producer_outcome_A14e           CERTIFICATE | ABSTAIN(reason)
 ```
 
@@ -1267,10 +1393,15 @@ invalid_experiment_reason       null, or the specific G0/G4 clause
 
 `primary_verdict = NOT_PRODUCED` records the case where the honest producer **abstained** on
 the primary claim over a bundle the §8.5 test called `SUFFICIENT`. That is not a soundness
-failure — abstaining is always the producer's right (§2.3) — and it is not a fact-model failure,
-because the facts were there and fully modelled. It is exactly the case `FAIL_EXPRESSIVITY`
-names, and §12.2 `G6` routes it there. Without this value the automaton would have had a hole:
-a run in which nothing was forged, nothing was missing, and nothing was proved.
+failure — abstaining is always the producer's right (§2.3) — and it is not a fact-model
+failure, because the facts were there and fully modelled. Without this value the automaton
+would have had a hole: a run in which nothing was forged, nothing was missing, and nothing was
+proved.
+
+It reaches `FAIL_EXPRESSIVITY` (§12.2 `G7`) only when `expected_claim_status` is
+`EXPECTED_CLAIM_SUPPORTED`. When the facts contradict the expected claim, the same abstention
+is the *correct* answer and `G6` has already routed the run to
+`INVALID_EXPECTED_CLAIM_INPUT` (§8.6).
 
 ### 12.2 Aggregate outcome — a sequential automaton
 
@@ -1297,7 +1428,7 @@ G2   any clause S1..S4 of §11.2 fails                    -> FAIL_INDEPENDENCE
 G3   any applicable rejecting case returned VALID
      OR A15 returned anything but VALID
      OR A12c, A14e or A16 returned a CERTIFICATE
-     OR A12b's audit failed, incl. K1 or K2 of §9.3      -> FAIL_SOUNDNESS
+     OR A12b's audit failed, incl. any of K1..K5 of §9.3 -> FAIL_SOUNDNESS
 
 G4   any applicable rejecting case returned INVALID with
      a reason_code other than its preregistered one,
@@ -1308,11 +1439,14 @@ G4   any applicable rejecting case returned INVALID with
 G5   any eligible specimen has
      sufficiency != SUFFICIENT                           -> FAIL_FACT_MODEL
 
-G6   any eligible specimen has
+G6   any eligible specimen has expected_claim_status
+     == EXPECTED_CLAIM_CONTRADICTED               (§8.6) -> INVALID_EXPECTED_CLAIM_INPUT
+
+G7   any eligible specimen has
      primary_verdict != VALID                            -> FAIL_EXPRESSIVITY
        (covers both INVALID and NOT_PRODUCED, §12.1)
 
-G7   otherwise                                           -> PASS
+G8   otherwise                                           -> PASS
 ```
 
 Why the order is this order, since a first-match automaton is only as good as its ordering:
@@ -1330,9 +1464,12 @@ Why the order is this order, since a first-match automaton is only as good as it
 - **`G4` above `G5`/`G6`.** If the matrix and the ladder disagree, the rejections are not
   evidence about anything yet, and reading a fact-model or expressivity result out of them
   would be reading a broken instrument.
-- **`G5` above `G6`.** §8.5 partitions their triggers, so they cannot both fire on the same
-  specimen; the ordering resolves the case where different specimens fire different gates,
-  and it favours naming the more upstream defect.
+- **`G5` above `G6` above `G7`.** These three are ordered by how far upstream the defect is,
+  and their triggers are disjoint on a single specimen by construction: `G6` is evaluated only
+  where `sufficiency = SUFFICIENT`, and `G7` only where the expected claim is *supported*
+  (§8.6). The ordering resolves the remaining case — different specimens firing different
+  gates — in favour of naming the most upstream broken thing. A run cannot be called
+  inexpressive while one of its inputs is contradicting its own catalog entry.
 
 ### 12.3 What `PASS` means, and what it does not
 
@@ -1355,10 +1492,16 @@ Why the order is this order, since a first-match automaton is only as good as it
 - that the absence invariant was exercised, unless `claim_class_coverage` records `absence`
   as covered (§4.5).
 
-`FAIL_EXPRESSIVITY` is likewise narrow: it says the frozen `E5-RULES/v1` could not express an
-acceptable derivation for a claim whose facts were present and fully modelled. It is not a
-result about proof-carrying findings in general, and it is repaired by an `E5-v2` with a new
-ruleset id, never by adding a rule to `v1`.
+`FAIL_EXPRESSIVITY` is likewise narrow, and §8.6 is what makes the words accurate: it says the
+frozen `E5-RULES/v1` could not express an acceptable derivation for a claim whose facts were
+present, fully modelled, **and actually supported the claim**. It is not a result about
+proof-carrying findings in general, and it is repaired by an `E5-v2` with a new ruleset id,
+never by adding a rule to `v1`.
+
+`INVALID_EXPECTED_CLAIM_INPUT` means less than any of them: E5 was handed a revision whose
+canonical facts contradict the defect the E1 catalog assigns to it. It is a statement about
+that input, it is preserved in the record, and it is **not** evidence about the injection,
+about the extractor, or about certificates — E5 cannot tell those apart (§8.6).
 
 ---
 
@@ -1379,29 +1522,85 @@ than E1's — a complicated freeze predicate is one more thing that can be defec
 
 ### 14.1 The freeze event
 
-> **The freeze event is the merge commit of this document into this repository's default
-> branch.**
+> **The freeze event is the merge commit that first introduces this document into this
+> repository's default branch, identified topologically by §14.2 and by nothing else.**
 
 Not its authoring, not its review, not its being committed on a branch. E1-v2 stopped
 precisely because *committed* was treated as *merged* (E1-v2-STOP §1). The merge is an event
-with a sha; it is the only thing E5 keys on.
+with a sha.
+
+**It must be an ordinary merge commit — no squash, no rebase, no fast-forward.** A squash or
+a fast-forward destroys the two-parent topology §14.2 keys on, and leaves E5 with no
+identifiable freeze event at all. This is not a style preference; it is the mechanism.
 
 The merge is performed by the repository owner, not by the author of this document.
 
-### 14.2 `E5_FROZEN` — mechanically checkable
+### 14.2 `E5_FROZEN` — self-identifying, not selected afterwards
 
-For any commit `c` at which E5 work is performed:
+An earlier draft of this section defined `M` as "the merge commit of this document" and then
+had `E5-M0` *record* which commit that was. That is a post-hoc selectable anchor sitting at
+the exact point of the protocol whose job is to forbid post-hoc selection, and it admits:
 
 ```text
-E5_FROZEN(c) iff
-  1.  c is the merge commit M of this document into the default branch, or a
-      descendant of it;
-  2.  the blob sha of docs/experiments/E5-finding-certificates-preregistration.md
-      at M equals the E5_DOC_BLOB_SHA recorded in E5-M0;
-  3.  no commit in M..c modifies that path.
+M_real     the preregistration is genuinely merged
+   ↓
+           the document is edited
+   ↓
+M_fake     some later merge
+   ↓
+E5-M0      declares M = M_fake
 ```
 
-Three clauses, all checkable with `git`. That is the whole predicate.
+All three of the old clauses were satisfied by that history, because nothing in them said `M`
+was the commit that *first introduced* the path. `M` is therefore now **computed from git
+history**, not declared.
+
+```text
+freeze_base_sha := 8f5aaeda667b2fecd7963f53806811b24cc36607     (= E5_DESIGN_CUTOFF_SHA)
+doc_path        := docs/experiments/E5-finding-certificates-preregistration.md
+
+M is the unique commit reachable from the default branch's tip satisfying ALL of:
+
+  (a)  M has exactly two parents
+  (b)  M^1 == freeze_base_sha
+  (c)  doc_path is ABSENT at M^1
+  (d)  doc_path is PRESENT at M^2
+  (e)  blob(M:doc_path) == blob(M^2:doc_path)
+  (f)  EXACTLY ONE commit reachable from the default branch's tip satisfies
+       (a)-(e). Zero  -> E5 is not frozen.
+            Two or more -> INVALID_EXPERIMENT; E5 is not frozen and may not be
+            frozen by choosing between them.
+
+E5_FROZEN(c) iff
+  1.  M exists and is unique per (a)-(f);
+  2.  c == M, or c is a descendant of M;
+  3.  no commit in M..c modifies doc_path.
+```
+
+Every clause is a `git` command. `(b)` anchors the freeze to the design cutoff this document
+already names in §1.1, so the anchor is a value the document itself carries rather than one a
+later manifest supplies. `(c)`/`(d)` make `M` the introducing merge and not merely *a* merge.
+`(e)` forbids altering the document while merging it. `(f)` is what closes the substitution
+above: a second candidate does not let someone pick; it stops E5.
+
+`E5-M0` still records `M` and the document's blob sha, but now as **audit values that must
+equal the computed ones**. A recorded value disagreeing with the computation is
+`INVALID_EXPERIMENT` (§12.2 G0), not a tie-break.
+
+**Two operational consequences, and they are binding.**
+
+1. **This PR must merge before the in-flight E1-v5 PR.** Clause `(b)` requires `M^1` to be
+   exactly `8f5aaed`. Once any other merge lands on the default branch first, no commit can
+   satisfy `(b)` and this document becomes unfreezable as written.
+2. **If that ordering is missed, E5 is not re-anchored quietly.** The remedy is a new reviewed
+   revision of this preregistration naming a new `freeze_base_sha`, opened as an explicit
+   successor with the reason recorded — the same shape E1-v4-STOP established. Silently
+   re-pointing `freeze_base_sha` after the fact would reintroduce exactly the defect this
+   section exists to remove.
+
+The cost is real: a stricter predicate has more ways to become unsatisfiable, and it couples
+E5's freeze to a merge ordering. That cost is accepted, because the alternative is a freeze
+whose anchor can be chosen after the edits it is supposed to forbid.
 
 ### 14.3 Two manifests, append-only
 
@@ -1412,9 +1611,11 @@ condition, not a licence to revise the earlier stage.
 ```text
 E5-M0   protocol manifest      written AFTER the freeze merge M,
                                BEFORE any extractor or verifier run
-    E5_DESIGN_CUTOFF_SHA
-    M, the freeze merge sha
-    E5_DOC_BLOB_SHA
+    E5_DESIGN_CUTOFF_SHA, which is also freeze_base_sha              (§14.2)
+    M, the COMPUTED freeze merge sha, together with the (a)-(f) evidence
+      — recorded as an audit value that must equal the computed one, never
+      as the thing that selects it                                    (§14.2)
+    E5_DOC_BLOB_SHA, likewise recomputable from M
     spec_revision  (the E1 Step 2 blob sha, §5.1) and the E1 Step 0 blob sha
     ruleset_id and a digest over the ruleset artifact
     the E5-FACTS/v1 and E5-CERT/v1 schema digests
@@ -1422,7 +1623,9 @@ E5-M0   protocol manifest      written AFTER the freeze merge M,
       adversarial matrix, verifier ladder and decision rule — by reference to
       this document's sections and its blob sha
     canonicalization and digest function            (RFC 8785 JCS / SHA-256)
-    the §11.2 S2 deny-list
+    the §11.2 S2 deny-list, all five categories
+    the §9.3 capability boundary: the FactResolver interface declaration and
+      the BundleLoader exported signature, by reference and digest
 
 E5-M1   input record            appended BEFORE the first verification run
     the commit at which E5_INPUT_SET was evaluated — REQUIRED to be the default
@@ -1432,12 +1635,12 @@ E5-M1   input record            appended BEFORE the first verification run
     claim_class_coverage
     the extractor revision
     the per-revision fact bundle digests, clean and injected
+```
 
 One E5 run has exactly one `E5-M1`. If E1 later produces further eligible specimens, that is a
 **second E5 run**, with its own `E5-M1` and its own recorded outcome, under this same frozen
 document. Both results stand; neither replaces the other, and a later run may not be presented
 as a correction of an earlier one.
-```
 
 There is no `E5-M2`. Per-specimen results are outputs, recorded under §12.1, not a manifest
 stage: nothing about a specimen needs fixing after `E5-M1` and before its measurement, so
@@ -1500,7 +1703,10 @@ choose after seeing a result:
 | inference rules | §7 |
 | canonical derivation skeletons | §8.2–§8.4 |
 | fact-sufficiency test | §8.5 |
-| verifier obligations, kernel checks `K1`/`K2`, rejection ladder | §9 |
+| expected-claim classification | §8.6 |
+| producer/kernel capability boundary | §9.3 |
+| freeze anchor and its topology | §14.1, §14.2 |
+| verifier obligations, capability boundary `K1`–`K5`, rejection ladder | §9 |
 | adversarial transformations and expected codes | §10 |
 | independence requirement | §11 |
 | decision rule and its precedence | §12.2 |
@@ -1606,9 +1812,12 @@ better one. So the blocker is recorded and E5 is frozen anyway.
 
 1. **The extractor is trusted and untested** (§2.2). This is the largest limitation and it is
    structural, not incidental.
-2. **`K2` is backed by review, not by a tool** (§9.3). Every other kernel and independence
-   check is mechanical. `K2` is the clause on which the whole closed-domain guarantee finally
-   rests, so it is also the one worth a second reviewer.
+2. **One residual review obligation remains, and it is the `BundleLoader`** (§9.3). `K1`–`K5`
+   are mechanical and make the kernel structurally incapable of enumerating the bundle, so the
+   closed-domain guarantee no longer rests on reading the checker for the absence of a
+   behaviour. What is left is whether one exported function with one signature computes the
+   digest it claims. Eliminating even that would need a verified toolchain; E5 does not have
+   one and does not claim to.
 3. **The claim space is three sites and five fields** (§7.4). Nothing here generalises to
    arbitrary findings, and §12.3 forbids claiming that it does.
 4. **A well-typed-but-unlicensed rule substitution barely exists** in a five-rule vocabulary
@@ -1623,6 +1832,7 @@ better one. So the blocker is recorded and E5 is frozen anyway.
 
 ### 17.3 A null result is a result
 
-`FAIL_SOUNDNESS`, `FAIL_EXPRESSIVITY`, `FAIL_INDEPENDENCE`, `FAIL_FACT_MODEL` and
-`BLOCKED_NO_ELIGIBLE_E1_INPUT` are all preserved and written up. Redesign after seeing a
+`FAIL_SOUNDNESS`, `FAIL_EXPRESSIVITY`, `FAIL_INDEPENDENCE`, `FAIL_FACT_MODEL`,
+`INVALID_EXPECTED_CLAIM_INPUT` and `BLOCKED_NO_ELIGIBLE_E1_INPUT` are all preserved and
+written up. Redesign after seeing a
 result belongs to an `E5-v2` and a new preregistration document, never to an edit of this one.
