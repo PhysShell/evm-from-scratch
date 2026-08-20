@@ -628,9 +628,22 @@ Binding on the trusted-for-E5 extractor, and checkable by review of its output:
   exhaustively — a completeness witness is a claim, and emitting one speculatively is the
   extractor lying in the one place E5 has no defence (§3.4);
 - it must not coerce an unparseable expression into a modelled `BindingExpr` (§5.2);
-- it is run **once per source revision**, and its output bundle digest is written into
-  `E5-M1` before any verification runs (§14.3). Re-extraction after a rejection is a
-  protocol violation and yields `INVALID_EXPERIMENT`.
+- it is run **exactly once per `(run_id, extractor_revision, source_revision)`**, and its
+  output bundle digest is written into that run's `E5-M1` before any verification in that
+  run (§14.3);
+- **within a run, re-extraction is a protocol violation** and yields `INVALID_EXPERIMENT`.
+  This is the rule that stops *"the verifier rejected it, so quietly rebuild the bundle and
+  try again"*, and it is the whole point of the constraint;
+- **across runs, re-extraction is permitted**, and is *mandatory* when `extractor_revision`
+  changes or the required bundle identity changes. That is a **new run** with its own
+  `E5-M1` and its own place in the chain (§14.3) — never a second extraction inside the run
+  whose result it would be quietly replacing.
+
+An earlier revision of this clause said "once per source revision" without qualification,
+which contradicted §14.3's permission to re-run with a repaired extractor: fixing the
+extractor and re-extracting the *same* specimen revisions would have been simultaneously
+required and forbidden. Scoping the prohibition to the run keeps the protection and removes
+the contradiction.
 
 ---
 
@@ -1460,14 +1473,19 @@ producer_outcome_A14e           CERTIFICATE | ABSTAIN(reason)
 Run-level:
 
 ```text
-run_id                          this run's identifier, as recorded in E5-M1
-previous_run_id                 the run this one succeeds, or null   (§14.3)
+run_id                          globally unique; recorded in E5-M1     (§14.3)
+previous_run_id                 the immediately preceding run, or null (§14.3)
+run_abandoned                   null, or the reason this run was set up and never
+                                  reached an outcome — an abandoned run stays in
+                                  the chain rather than being dropped from it
 extractor_revision              pinned per run
 producer_revision               pinned per run
 verifier_revision               pinned per run
 e5_input_set                    the evaluated set, with the commit it was read at
 claim_class_coverage            absence / misbinding, per §4.5
-e5_outcome                      one value from §12.2
+e5_outcome                      one value from §12.2, or null iff run_abandoned
+                                  is set — a run has an outcome or a recorded
+                                  reason for having none, never neither
 invalid_experiment_reason       null, or the specific G0/G4 clause
 ```
 
@@ -1524,10 +1542,14 @@ G0   protocol integrity                                  -> INVALID_EXPERIMENT
          E5-M0 or E5-M1 missing, or written out of the order §14.3 requires
          a recorded specimen sha does not resolve, or its tree differs from
            the E1 M2 record it claims
-         the extractor was run more than once for a source revision, or the
-           extractor, producer or verifier revision used differs from the one
-           E5-M1 records for this run_id (a changed revision requires a NEW
-           run, §14.3 — it is not a within-run substitution)
+         the extractor was run more than once for the same
+           (run_id, extractor_revision, source_revision)          (§5.6)
+         the extractor, producer or verifier revision actually used differs
+           from the one E5-M1 records for this run_id — a changed revision
+           requires a NEW run (§14.3), never a within-run substitution
+         the run chain is not total (§14.3): a reused run_id; a
+           previous_run_id that is not the immediately preceding committed
+           E5-M1; or a committed E5-M1 absent from the chain
          a bundle digest differs from the one E5-M1 records
          an APPLICABLE mandatory case among A2..A17 could not be constructed
            — A1 is excluded: it is the primary observation, and its absence
@@ -1815,8 +1837,8 @@ E5-M1   input record            appended BEFORE the first verification run
 ```
 
 One E5 run has exactly one `E5-M1`, and one `E5-M1` fixes one implementation-and-input
-identity. A **new run** — new `run_id`, new `E5-M1`, `previous_run_id` pointing at the run it
-succeeds — is required whenever any of these changes after a governed run:
+identity. A **new run** — new `run_id`, new `E5-M1` — is required whenever any of these
+changes after a governed run:
 
 ```text
 extractor_revision      producer_revision      verifier_revision
@@ -1828,13 +1850,50 @@ of the freeze surface (§14.6). What is forbidden is not re-running but overwrit
 
 ```text
 an earlier run's recorded outcome is IMMUTABLE.
-A later run never replaces, corrects, or supersedes it. The result document
-reports the FULL previous_run_id chain, so a FAIL -> FAIL -> PASS sequence is
-visible as three runs and not as one success.
+A later run never replaces, corrects, or supersedes it.
 ```
 
+#### The run chain must be total
+
+Saying "`previous_run_id` points at the run it succeeds" is not enough, and the gap is worth
+naming because it defeats the exact property the field was added for. Unconstrained, this is
+admissible:
+
+```text
+R1  FAIL   previous_run_id = null
+R2  FAIL   previous_run_id = R1
+R3  PASS   previous_run_id = R1        <- R2 vanishes from the chain
+```
+
+`R2`'s manifest survives somewhere in git, but the chain reported alongside `R3` reads
+`R3 -> R1`, and the attempt count is no longer a matter of record. So the chain is frozen as a
+**total order**, not as a link:
+
+```text
+run_id           globally unique across every E5 run under this document.
+                 A reused run_id is INVALID_EXPERIMENT.
+
+previous_run_id  null IFF this is the first E5 run under this document;
+                 otherwise EQUAL to the run_id of the E5 run whose E5-M1 was
+                 committed most recently before this run's E5-M1.
+
+the chain        following previous_run_id back from the latest run MUST
+                 enumerate EVERY committed E5-M1 exactly once. Any gap, fork,
+                 cycle, or committed E5-M1 absent from the chain is
+                 INVALID_EXPERIMENT.
+```
+
+"Most recently before" is decided by the commit that introduces each `E5-M1` — a git fact, in
+keeping with §14.2, and not a value anyone selects afterwards. Every committed `E5-M1` is a run
+and belongs to the chain whether or not it reached a verdict; a run set up and then abandoned
+stays in the chain and records `run_abandoned` with a reason in place of an outcome (§12.1).
+Otherwise "write the manifest, dislike the result, drop the manifest" would be the same hole
+one level down.
+
+G0 checks all three properties (§12.2).
+
 That chain is the only thing standing between "repair the producer and re-run" (legitimate)
-and re-running until something passes (fishing). It costs one field and it makes the attempt
+and re-running until something passes (fishing). It costs two fields and it makes the attempt
 count a matter of record, in the same way the §14.2 topology log makes re-anchoring countable.
 
 There is no `E5-M2`. Per-specimen results are outputs, recorded under §12.1, not a manifest
@@ -1901,6 +1960,7 @@ choose after seeing a result:
 | expected-claim classification | §8.6 |
 | producer/kernel capability boundary | §9.3 |
 | freeze anchor and its topology | §14.1, §14.2 |
+| run identity, and the total run chain | §14.3 |
 | verifier obligations, capability boundary `K1`–`K5`, rejection ladder | §9 |
 | adversarial transformations and expected codes | §10 |
 | independence requirement | §11 |
