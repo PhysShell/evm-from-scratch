@@ -1,0 +1,9 @@
+{
+  "_capture": "PhysShell/evm-from-scratch PR #11, round 3 Codex CLEAN comment — second independent observation of the clean carrier, this time on a fresh generation whose epoch head matches the attestation. Flavor text differs from round 2 ('Can't wait for the next one!' vs 'Delightful!'); the stable prefix and the 'Reviewed commit' attestation are the contract. Body verbatim, details tags flattened.",
+  "id": 5365138092,
+  "user": {"login": "chatgpt-codex-connector[bot]", "id": 199175422, "type": "Bot"},
+  "created_at": "2026-08-21T04:18:03Z",
+  "updated_at": "2026-08-21T04:18:03Z",
+  "author_association": "NONE",
+  "body": "Codex Review: Didn't find any major issues. Can't wait for the next one!\n\n**Reviewed commit:** `ff74f6f34d`\n\n ℹ️ About Codex in GitHub\n\nYour team has set up Codex to review pull requests in this repo. Reviews are triggered when you\n- Open a pull request for review\n- Mark a draft as ready\n- Comment \"@codex review\".\n\nIf Codex has suggestions, it will comment; otherwise it will react with 👍.\n\nCodex can also answer questions or update the PR. Try commenting \"@codex address that feedback\".\n            \n"
+}

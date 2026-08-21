@@ -44,6 +44,8 @@ RABBIT_REQ_1, RABBIT_REQ_1_AT = 5364756884, "2026-08-21T03:15:11Z"
 CODEX_REQ_1, CODEX_REQ_1_AT = 5364757271, "2026-08-21T03:15:15Z"
 RABBIT_REQ_2, RABBIT_REQ_2_AT = 5364783235, "2026-08-21T03:19:31Z"
 CODEX_REQ_2, CODEX_REQ_2_AT = 5364783579, "2026-08-21T03:19:34Z"
+RABBIT_REQ_3, RABBIT_REQ_3_AT = 5365127777, "2026-08-21T04:16:23Z"
+CODEX_REQ_3, CODEX_REQ_3_AT = 5365128168, "2026-08-21T04:16:27Z"
 
 
 def load(name: str) -> dict:
@@ -211,6 +213,68 @@ class CleanPathWithRealPayloadTest(unittest.TestCase):
         )
         _, res, _ = g.evaluate(REPO_ID, PR, HEAD_C, now="2026-08-21T03:26:00Z")
         self.assertNotEqual(res[Provider.CODEX].state, ProviderState.CLEAN)
+
+
+class Round3FullGenerationReplayTest(unittest.TestCase):
+    """Round 3 as it happened: a fresh generation on the stable head C, with
+    its own request comments for BOTH providers (the round-2 Codex clean for
+    C was not reused — it belonged to the B-epoch generation). Outcome:
+    Codex CLEAN + CodeRabbit FINDINGS (N=1, the PROBE.md protocol/log
+    mismatch) => BLOCKED. The first full same-generation, same-head round
+    replayed end-to-end from real payloads."""
+
+    def setUp(self):
+        self.g = make_governor()
+        bind_round(
+            self.g.store,
+            HEAD_C,
+            BASE,
+            "2026-08-21T04:16:20Z",
+            (RABBIT_REQ_3, RABBIT_REQ_3_AT),
+            (CODEX_REQ_3, CODEX_REQ_3_AT),
+        )
+
+    def test_one_provider_clean_is_not_enough(self):
+        self.g.ingest_issue_comment(
+            REPO_ID, PR, load("pr11_round3_codex_clean_comment.json"),
+            now="2026-08-21T04:18:03Z",
+        )
+        self.g.ingest_review(
+            REPO_ID, PR, load("pr11_round3_coderabbit_review.json"),
+            now="2026-08-21T04:19:20Z",
+        )
+        verdict, res, epoch = self.g.evaluate(
+            REPO_ID, PR, HEAD_C, now="2026-08-21T04:20:00Z"
+        )
+        self.assertEqual(epoch.head_sha, HEAD_C)
+        self.assertEqual(res[Provider.CODEX].state, ProviderState.CLEAN)
+        self.assertEqual(res[Provider.CODERABBIT].state, ProviderState.FINDINGS)
+        self.assertEqual(verdict.verdict, Verdict.BLOCKED)
+
+    def test_codex_clean_prefix_is_stable_across_observed_flavor_texts(self):
+        """Rounds 2 and 3 differ only in flavor text after the stable
+        'Didn't find any major issues.' prefix — both must classify CLEAN
+        against their matching epoch."""
+        for fixture in (
+            "pr11_round2_codex_clean_comment.json",
+            "pr11_round3_codex_clean_comment.json",
+        ):
+            g = make_governor()
+            bind_round(
+                g.store,
+                HEAD_C,
+                BASE,
+                "2026-08-21T03:19:25Z",
+                (RABBIT_REQ_2, RABBIT_REQ_2_AT),
+                (CODEX_REQ_2, CODEX_REQ_2_AT),
+            )
+            g.ingest_issue_comment(
+                REPO_ID, PR, load(fixture), now="2026-08-21T04:20:00Z"
+            )
+            _, res, _ = g.evaluate(REPO_ID, PR, HEAD_C, now="2026-08-21T04:21:00Z")
+            self.assertEqual(
+                res[Provider.CODEX].state, ProviderState.CLEAN, fixture
+            )
 
 
 class TriggerBodyRealityTest(unittest.TestCase):

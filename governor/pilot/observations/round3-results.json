@@ -1,0 +1,59 @@
+{
+  "capture_note": "Round 3 (generation 3) terminal outcomes, PR #11, stable head C = ff74f6f34d10527ff357ebf75b43914722ad1588 (verified unchanged by a fresh PR read before and after the round). Captured 2026-08-21 via relayed webhook events + REST reads.",
+  "triggers": {
+    "coderabbit": {"id": 5365127777, "created_at": "2026-08-21T04:16:23Z", "user": {"login": "PhysShell", "id": 45852143}},
+    "codex": {"id": 5365128168, "created_at": "2026-08-21T04:16:27Z", "user": {"login": "PhysShell", "id": 45852143}},
+    "notes": [
+      "fresh request generation for BOTH providers — the round-2 Codex clean for C was deliberately not reused (it belonged to the B-epoch generation)",
+      "eyes liveness this round: codex trigger had eyes==1 in flight; the coderabbit trigger showed eyes==1 at one poll and 0 at another — reaction liveness is not a reliable ack signal across rounds"
+    ]
+  },
+  "coderabbit_outcome": {
+    "state": "FINDINGS (N=1), head-bound to C",
+    "review": {
+      "id": 4989640993,
+      "user": {"login": "coderabbitai[bot]", "id": 136622811},
+      "state": "COMMENTED",
+      "commit_id": "ff74f6f34d10527ff357ebf75b43914722ad1588",
+      "submitted_at": "2026-08-21T04:19:17Z",
+      "body_markers": {
+        "actionable": "**Actionable comments posted: 1**",
+        "run_id": "af803a4a-241d-439c-9164-c374107ef143",
+        "commit_range_attestation": "Reviewing files that changed from the base of the PR and between 047ff1a641e33e0bb8c6b9eea26bb80eea021e08 and ff74f6f34d10527ff357ebf75b43914722ad1588.",
+        "budget": "Your plan provides up to 1 included review per hour; 0 remain after this review."
+      }
+    },
+    "finding": {
+      "path": "governor/pilot/PROBE.md",
+      "severity_markers": "_🗄️ Data Integrity & Integration_ | _🟠 Major_",
+      "substance": "PROBE.md's numbered protocol (head-B clean capture) contradicts its own appended round log (head C pushed mid-round). A legitimate finding: the probe improvised the C-push and the protocol text was never reconciled.",
+      "note": "the intended clean capture therefore did NOT occur; the N=0 review shape remains unobserved"
+    },
+    "ack_lifecycle": {
+      "id": 5365130187,
+      "created_at": "2026-08-21T04:16:47Z (Action performed / Full review triggered — no fair-usage warning: budget had recovered exactly as the round-2 notice predicted)",
+      "edited_at": "2026-08-21T04:19:21Z (✅ Action performed / Full review finished.)"
+    },
+    "commit_status_observation": {
+      "status": {"context": "CodeRabbit", "state": "success", "description": "Review completed", "created_at": "2026-08-21T04:19:20Z", "sha": "ff74f6f34d10527ff357ebf75b43914722ad1588"},
+      "check_runs_on_head": 0,
+      "significance": "CodeRabbit sets a plain commit STATUS (not a check run) whose success means 'review completed' — it was success while the same run posted 1 actionable finding. The status context is therefore a completion signal, never a cleanliness signal, and must not be used as gate evidence. mergeable_state was observed 'unstable' mid-run (pending status) and the status flipped to success at completion."
+    },
+    "walkthrough_edit": "sticky comment edited again: walkthrough now attests scope 'up to `ff74f`' and Merge Risk 🟡 Moderate, citing the protocol/log mismatch and the (closed-PR-only) helper defects"
+  },
+  "codex_outcome": {
+    "state": "CLEAN, second independent observation of the same carrier shape",
+    "clean_comment": {
+      "id": 5365138092,
+      "user": {"login": "chatgpt-codex-connector[bot]", "id": 199175422},
+      "created_at": "2026-08-21T04:18:03Z",
+      "body_head_verbatim": "Codex Review: Didn't find any major issues. Can't wait for the next one!\n\n**Reviewed commit:** `ff74f6f34d`"
+    },
+    "notes": [
+      "flavor text varies between observations ('Delightful!' round 2, 'Can't wait for the next one!' round 3); the stable machine-checkable prefix is 'Codex Review: Didn't find any major issues.' plus the 'Reviewed commit' attestation",
+      "again no +1 reaction observed and no review object created for the clean case",
+      "latency 96s from trigger"
+    ]
+  },
+  "generation_3_replay": "with both real artifacts admitted to generation 3 (head C): codex=CLEAN, coderabbit=FINDINGS => verdict BLOCKED — the first full same-generation, same-head round replayed end-to-end from real payloads, exercising the 'one provider clean is not enough' semantics"
+}
