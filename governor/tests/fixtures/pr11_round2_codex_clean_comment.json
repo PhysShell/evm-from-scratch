@@ -1,0 +1,9 @@
+{
+  "_capture": "PhysShell/evm-from-scratch PR #11, round 2 CLEAN outcome from Codex, delivered as a NEW issue comment (issue_comment.created) — no review object, no +1 reaction observed. Captured live 2026-08-21. Body verbatim (details tags flattened). Requested on head d9796425..., attests head ff74f6f3... — Codex bound its run to the head current at run time.",
+  "id": 5364792938,
+  "user": {"login": "chatgpt-codex-connector[bot]", "id": 199175422, "type": "Bot"},
+  "created_at": "2026-08-21T03:21:11Z",
+  "updated_at": "2026-08-21T03:21:11Z",
+  "author_association": "NONE",
+  "body": "Codex Review: Didn't find any major issues. Delightful!\n\n**Reviewed commit:** `ff74f6f34d`\n\n ℹ️ About Codex in GitHub\n\nYour team has set up Codex to review pull requests in this repo. Reviews are triggered when you\n- Open a pull request for review\n- Mark a draft as ready\n- Comment \"@codex review\".\n\nIf Codex has suggestions, it will comment; otherwise it will react with 👍.\n\nCodex can also answer questions or update the PR. Try commenting \"@codex address that feedback\".\n            \n"
+}

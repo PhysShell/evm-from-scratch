@@ -206,7 +206,13 @@ class ShadowGovernor:
         return transitions
 
     def ingest_issue_comment(
-        self, repository_id: int, pr_number: int, comment: dict, now: str, raw_ref: str = ""
+        self,
+        repository_id: int,
+        pr_number: int,
+        comment: dict,
+        now: str,
+        raw_ref: str = "",
+        edited: bool = False,
     ) -> List[str]:
         actor_id = (comment.get("user") or {}).get("id")
 
@@ -225,6 +231,7 @@ class ShadowGovernor:
             comment,
             now,
             raw_ref=raw_ref,
+            edited=edited,
         )
 
     def ingest_review(

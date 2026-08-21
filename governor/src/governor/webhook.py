@@ -114,7 +114,11 @@ class WebhookProcessor:
                 label_name=(payload.get("label") or {}).get("name", ""),
                 now=now,
             )
-        if event == "issue_comment" and action == "created":
+        if event == "issue_comment" and action in ("created", "edited"):
+            # "edited" is load-bearing: CodeRabbit delivers its hard
+            # rate-limit refusal and its walkthrough only as in-place edits
+            # (observed PR #11, 2026-08-21). A created-only router would
+            # never see a refusal.
             issue = payload.get("issue") or {}
             if "pull_request" not in issue:
                 return ["ignored: comment on a non-PR issue"]
@@ -123,6 +127,7 @@ class WebhookProcessor:
                 pr_number=issue["number"],
                 comment=payload["comment"],
                 now=now,
+                edited=(action == "edited"),
             )
         if event == "pull_request_review" and action == "submitted":
             return g.ingest_review(

@@ -44,7 +44,20 @@ TRIGGER_BODY = "@coderabbitai full review"
 #: head.
 _ACTIONABLE_RE = re.compile(r"Actionable comments posted:\s*(\d+)")
 
-_RATE_LIMIT_RE = re.compile(r"rate.?limit", re.IGNORECASE)
+#: Hard refusal markers, OBSERVED 2026-08-21 PR #11 round 2: the ack comment
+#: 5364784582 was EDITED from "Action performed / Full review triggered" to
+#: "⚠️ Action not completed / Review rate limited." and the sticky comment
+#: gained "## Review limit reached / ... we couldn't start this review /
+#: Next review available in: 55 minutes". These must outrank ack markers,
+#: because the edited body still contains "I will perform a full review".
+#: The *soft* fair-usage warning ("included review limit is currently
+#: reached ... may still proceed through usage-based billing") accompanies a
+#: successful "Action performed" ack and must NOT match here.
+_HARD_LIMIT_RE = re.compile(
+    r"(Review rate limited|Action not completed|Review limit reached"
+    r"|reached your PR review limit)",
+    re.IGNORECASE,
+)
 # "Action performed" observed singular on PR #11 (comment 5364757871,
 # 2026-08-21): "I will perform a full review of pull request `#11`. /
 # Action performed / Full review triggered."
@@ -170,20 +183,26 @@ def classify_review_comment(
 
 
 def classify_issue_comment(
-    payload: dict, ctx: AdmissionContext, raw_ref: str = ""
+    payload: dict, ctx: AdmissionContext, raw_ref: str = "", edited: bool = False
 ) -> ClassificationResult:
     """Classify a CodeRabbit-authored issue comment on the PR.
 
-    A comment carries no SHA, so even a parseable "Actionable comments
-    posted: 0" here cannot bind to the epoch head — it classifies as
-    INCONCLUSIVE (clean text without head binding), never CLEAN.
+    A comment carries no SHA binding usable for CLEAN, so even a parseable
+    "Actionable comments posted: 0" here classifies as INCONCLUSIVE.
+
+    ``edited`` matters: observed round 2, the hard rate-limit refusal exists
+    ONLY as an edit of the ack comment, and the walkthrough/limit warnings
+    only as edits of the sticky comment. Edited carriers admit on their
+    ``updated_at`` and may contribute any *non-positive* state; a would-be
+    CLEAN from an edited surface is impossible here by construction.
     """
     rej = check_actor(Provider.CODERABBIT, payload.get("user"))
     if rej:
         return None, Rejection(rej.provider, rej.reason, rej.detail, payload.get("id"))
-    rej = check_timing(
-        Provider.CODERABBIT, ctx, payload.get("created_at"), payload.get("id")
-    )
+    effective_at = (
+        payload.get("updated_at") if edited else payload.get("created_at")
+    ) or payload.get("created_at")
+    rej = check_timing(Provider.CODERABBIT, ctx, effective_at, payload.get("id"))
     if rej:
         return None, rej
 
@@ -191,9 +210,9 @@ def classify_issue_comment(
     count = _actionable_count(body)
     role = EvidenceRole.TERMINAL
 
-    if _RATE_LIMIT_RE.search(body):
+    if _HARD_LIMIT_RE.search(body):
         classification = ProviderState.RATE_LIMITED
-        detail = "rate-limit text from provider"
+        detail = "hard review-limit refusal from provider"
     elif _FAILURE_RE.search(body):
         classification = ProviderState.UNAVAILABLE
         detail = "provider failure text"
@@ -235,7 +254,7 @@ def classify_issue_comment(
             carrier_id=payload.get("id", 0),
             actor_id=payload["user"]["id"],
             actor_login=payload["user"].get("login", ""),
-            created_at=payload["created_at"],
+            created_at=effective_at,
             classification=classification,
             role=role,
             detail=detail,

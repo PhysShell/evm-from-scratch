@@ -1,0 +1,104 @@
+{
+  "capture_note": "Round 1 (generation 1) terminal artifacts, PR #11, head A = 1bc8038d0339bef67ad145bff85fb04b24e1e24b. Captured ~03:20-03:22Z via REST reads.",
+  "codex_review": {
+    "id": 4989404627,
+    "user": {"login": "chatgpt-codex-connector[bot]", "id": 199175422},
+    "state": "COMMENTED",
+    "commit_id": "1bc8038d0339bef67ad145bff85fb04b24e1e24b",
+    "submitted_at": "2026-08-21T03:16:53Z",
+    "body_verbatim": "\n### 💡 Codex Review\n\nHere are some automated review suggestions for this pull request.\n\n**Reviewed commit:** `1bc8038d03`\n    \n\n ℹ️ About Codex in GitHub\n<br/>\n\n[Your team has set up Codex to review pull requests in this repo](https://chatgpt.com/codex/cloud/settings/general). Reviews are triggered when you\n- Open a pull request for review\n- Mark a draft as ready\n- Comment \"@codex review\".\n\nIf Codex has suggestions, it will comment; otherwise it will react with 👍.\n\n\n\n\nCodex can also answer questions or update the PR. Try commenting \"@codex address that feedback\".\n            \n",
+    "latency_from_trigger_s": 98,
+    "notes": [
+      "actor id 199175422 confirmed by direct observation for the first time in this repository",
+      "review.commit_id == epoch head A (GitHub structured field)",
+      "body carries provider-authored 'Reviewed commit: `1bc8038d03`' (10-char short SHA)",
+      "body self-documents the clean contract: 'If Codex has suggestions, it will comment; otherwise it will react with 👍.'",
+      "trigger ambiguity: PR open (03:14:34) would also have triggered per the body text; cannot attribute this review solely to the @codex mention"
+    ]
+  },
+  "codex_inline_comments": [
+    {
+      "thread_id": "PRRT_kwDOT5uhy86bBlxu",
+      "author": "chatgpt-codex-connector",
+      "created_at": "2026-08-21T03:16:53Z",
+      "path": "governor/pilot/probe_sample.py",
+      "line": 11,
+      "body_head": "P1 Badge ... Return true only when the heads match",
+      "note": "P1 severity badge; matches planted inverted-comparison defect"
+    },
+    {
+      "thread_id": "PRRT_kwDOT5uhy86bBlxw",
+      "author": "chatgpt-codex-connector",
+      "created_at": "2026-08-21T03:16:53Z",
+      "path": "governor/pilot/probe_sample.py",
+      "line": 14,
+      "body_head": "P2 Badge ... Create a fresh accumulator for every call",
+      "note": "P2 severity badge; matches planted mutable-default defect"
+    }
+  ],
+  "coderabbit_review": {
+    "id": 4989406397,
+    "user": {"login": "coderabbitai[bot]", "id": 136622811},
+    "state": "COMMENTED",
+    "commit_id": "1bc8038d0339bef67ad145bff85fb04b24e1e24b",
+    "submitted_at": "2026-08-21T03:17:22Z",
+    "body_markers": {
+      "actionable": "**Actionable comments posted: 2**",
+      "run_id": "62b703ab-b811-408c-a429-b116eaddbaba",
+      "commit_range_attestation": "Reviewing files that changed from the base of the PR and between 047ff1a641e33e0bb8c6b9eea26bb80eea021e08 and 1bc8038d0339bef67ad145bff85fb04b24e1e24b.",
+      "review_budget": "Your plan provides up to 1 included review per hour; 0 remain after this review."
+    },
+    "latency_from_trigger_s": 131,
+    "notes": [
+      "review.commit_id == head A",
+      "'Actionable comments posted: N' marker exists exactly as hypothesized, in the REVIEW body (head-bound carrier)",
+      "body attests the full base..head SHA range in prose — stronger than commit_id alone",
+      "included-review budget is 1/hour on this plan (the docs' 10/hour figure did not apply); 0 remain — round 2 within the hour is the rate-limit probe",
+      "was NOT visible in a reviews listing fetched ~2 min after submitted_at, then appeared — listing lag/eventual consistency is real"
+    ]
+  },
+  "coderabbit_inline_comments": [
+    {
+      "author": "coderabbitai",
+      "created_at": "2026-08-21T03:17:21Z",
+      "path": "governor/pilot/probe_sample.py",
+      "line": 11,
+      "severity_markers": "_🎯 Functional Correctness_ | _🟡 Minor_ | _⚡ Quick win_",
+      "has_committable_suggestion": true
+    },
+    {
+      "author": "coderabbitai",
+      "created_at": "2026-08-21T03:17:21Z",
+      "path": "governor/pilot/probe_sample.py",
+      "line": 22,
+      "severity_markers": "_🎯 Functional Correctness_ | _🟡 Minor_ | _⚡ Quick win_",
+      "has_committable_suggestion": true,
+      "source_marker": "_Source: Linters/SAST tools_ (Ruff B006)"
+    }
+  ],
+  "comment_edit_mechanics": [
+    {
+      "finding": "the on-open placeholder comment 5364754026 was EDITED in place into the Walkthrough",
+      "created_at": "2026-08-21T03:14:43Z",
+      "updated_at": "2026-08-21T03:17:19Z",
+      "walkthrough_markers": ["📝 Walkthrough", "Merge Risk: ⚪ Minimal · up to `1bc80`", "🚥 Pre-merge checks | ✅ 5"],
+      "consequence": "issue_comment.created webhooks never carry the walkthrough; only .edited does; admission keyed on created_at excludes it (acceptable: walkthrough has no outcome authority)"
+    },
+    {
+      "finding": "the ack comment 5364757871 was EDITED from 'Action performed / Full review triggered.' to '✅ Action performed / Full review finished.'",
+      "created_at": "2026-08-21T03:15:21Z",
+      "updated_at": "2026-08-21T03:17:26Z",
+      "consequence": "'Full review finished' arrives as an edit, not a new comment; and it is command completion, NOT zero-findings — reducer must never treat it as CLEAN (it does not)"
+    }
+  ],
+  "reaction_dynamics": [
+    {
+      "finding": "both trigger comments showed reactions.eyes==1 at ~03:16Z and reactions all-zero at ~03:22Z (after both reviews completed)",
+      "consequence": "eyes is transient liveness that providers REMOVE on completion; reactions are mutable, deletable, webhookless state — polling sees only the current snapshot, and a reaction-based signal is not replayable for audit"
+    },
+    {
+      "finding": "no +1 appeared on the codex trigger comment in the findings case",
+      "consequence": "consistent with the provider-documented contract (👍 only when no suggestions)"
+    }
+  ]
+}

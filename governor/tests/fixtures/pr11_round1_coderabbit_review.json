@@ -1,0 +1,10 @@
+{
+  "_capture": "PhysShell/evm-from-scratch PR #11, round 1 findings review by CodeRabbit. Captured live 2026-08-21 via REST. Sanitized: marketing/share footer and checkbox HTML elided as [...]; every load-bearing marker (actionable count, run id, commit-range attestation, budget line) kept verbatim.",
+  "id": 4989406397,
+  "user": {"login": "coderabbitai[bot]", "id": 136622811, "type": "Bot"},
+  "state": "COMMENTED",
+  "commit_id": "1bc8038d0339bef67ad145bff85fb04b24e1e24b",
+  "submitted_at": "2026-08-21T03:17:22Z",
+  "author_association": "NONE",
+  "body": "**Actionable comments posted: 2**\n\n[...]\n\n**Configuration used**: defaults\n\n**Review profile**: CHILL\n\n**Plan**: Pro Plus\n\n**Run ID**: `62b703ab-b811-408c-a429-b116eaddbaba`\n\n[...]\n\nReviewing files that changed from the base of the PR and between 047ff1a641e33e0bb8c6b9eea26bb80eea021e08 and 1bc8038d0339bef67ad145bff85fb04b24e1e24b.\n\n[...]\n\n**Included review availability:** Your plan provides up to 1 included review per hour; 0 remain after this review.\n"
+}

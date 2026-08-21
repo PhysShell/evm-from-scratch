@@ -1,0 +1,31 @@
+{
+  "capture_note": "Round 2 (generation 2) setup + interim observations. Head B = d979642546f29c2a3c032b4146687d40cceaf320 (bait removed), head C = ff74f6f34d10527ff357ebf75b43914722ad1588 pushed mid-review.",
+  "timeline_server_times": {
+    "head_B_pushed": "~2026-08-21T03:18:3xZ (local 03:18)",
+    "trigger_coderabbit": {"id": 5364783235, "created_at": "2026-08-21T03:19:31Z", "user": {"login": "PhysShell", "id": 45852143}},
+    "trigger_codex": {"id": 5364783579, "created_at": "2026-08-21T03:19:34Z", "user": {"login": "PhysShell", "id": 45852143}},
+    "head_C_pushed_local": "2026-08-21T03:19:45Z",
+    "note": "head C landed 11-14s after the round-2 triggers; the round is stale-by-construction almost immediately"
+  },
+  "observations": [
+    {
+      "finding": "soft-limit carrier: round-2 CodeRabbit ack includes a Fair-Usage notice that is NOT a hard refusal",
+      "evidence": {
+        "ack_comment": {
+          "id": 5364784582,
+          "user": {"login": "coderabbitai[bot]", "id": 136622811},
+          "created_at": "2026-08-21T03:19:44Z",
+          "body_verbatim": "\n\n`@PhysShell`: I will perform a full review of pull request `#11`.\n\n\nAction performed\n\nFull review triggered.\n\n---\n\nYour included review limit is currently reached under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy). This review may still proceed through usage-based billing if eligible. Your next included review will be available in 55 minutes.\n\n"
+        }
+      },
+      "consequence": "the text says the review MAY still proceed — this shape must classify as acknowledgement (PENDING), not RATE_LIMITED; a hard 'Review rate limited' refusal, if it exists, is a different carrier that this pilot has not yet observed"
+    },
+    {
+      "finding": "both round-2 trigger comments carried reactions.eyes==1 while the round was in flight (read at ~03:20Z)"
+    },
+    {
+      "finding": "the sticky comment 5364754026 was edited a third time (updated_at 03:19:59) and now interleaves a NEW placeholder block (Run ID bc120b3f-ca98-4721-a5d4-b655966d795e) with the round-1 walkthrough, whose scope marker still says 'up to `1bc80`' although the true head is ff74f6f",
+      "consequence": "the sticky comment is a mutable multiplexed surface whose content lags the head — it cannot serve as an evidence carrier at all"
+    }
+  ]
+}

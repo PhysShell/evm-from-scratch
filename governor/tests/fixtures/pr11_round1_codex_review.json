@@ -1,0 +1,10 @@
+{
+  "_capture": "PhysShell/evm-from-scratch PR #11, round 1 findings review header by Codex. Captured live 2026-08-21 via REST; body verbatim (details tags flattened by the capture transport). The two findings were delivered as inline review comments (P1/P2 badges) under this review.",
+  "id": 4989404627,
+  "user": {"login": "chatgpt-codex-connector[bot]", "id": 199175422, "type": "Bot"},
+  "state": "COMMENTED",
+  "commit_id": "1bc8038d0339bef67ad145bff85fb04b24e1e24b",
+  "submitted_at": "2026-08-21T03:16:53Z",
+  "author_association": "NONE",
+  "body": "\n### 💡 Codex Review\n\nHere are some automated review suggestions for this pull request.\n\n**Reviewed commit:** `1bc8038d03`\n    \n\n ℹ️ About Codex in GitHub\n\nYour team has set up Codex to review pull requests in this repo. Reviews are triggered when you\n- Open a pull request for review\n- Mark a draft as ready\n- Comment \"@codex review\".\n\nIf Codex has suggestions, it will comment; otherwise it will react with 👍.\n\nCodex can also answer questions or update the PR. Try commenting \"@codex address that feedback\".\n            \n"
+}
