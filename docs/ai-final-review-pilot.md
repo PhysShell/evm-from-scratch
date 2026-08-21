@@ -157,11 +157,14 @@ expected ID; first direct observation in this repository).
   the clean case; **no 👍 reaction was observed at any poll**, despite the
   provider's own blurb ("otherwise it will react with 👍").
 * **Head binding under mid-flight push:** round 2 was requested while head
-  was B; head C was pushed 11s later; Codex attested **C** — it binds its
-  run to the head current at run time and says so explicitly. Codex clean
-  lineage is therefore *available*, contradicting the prior-art assumption
-  (`provider_input_lineage = unavailable` in the codex-review-gate v2
-  contract) — the carrier has since gained an explicit attestation.
+  was B; head C was pushed 11s later; Codex attested **C** — it bound its
+  run to the head current at run time and said so explicitly. Scope of this
+  claim: the **observed clean-comment carrier** explicitly attests a
+  reviewed short SHA, and in round 2 that SHA identified the current head.
+  The prior-art assumption (`provider_input_lineage = unavailable` in the
+  codex-review-gate v2 contract) is outdated **for this observed carrier
+  shape**; this does not establish a lineage guarantee for all Codex
+  carriers or versions.
 * **Liveness:** an `eyes` reaction appears on the trigger comment within
   seconds and is **removed after completion** (observed present at 03:16,
   gone at 03:22 for round 1). Reactions are mutable, deletable state.
@@ -201,19 +204,38 @@ auto-review disabled ("fewer than 10 stars"), manual trigger required.
   markers (`Review rate limited`, `Action not completed`,
   `Review limit reached`, `reached your PR review limit`) classify as
   RATE_LIMITED.
-* **Real budget:** despite documented plan numbers (Pro+ "10 reviews/hour"),
-  the observed allowance was **"up to 1 included review per hour; 0
-  remain"**, and CodeRabbit's own docs note the hourly allowance is
-  adaptive over a 7-day window. Enforcement design must assume a budget of
-  ~1 full review/hour/developer, not 10.
+* **Budget is dynamic, not a constant:** what is proven is only that *on
+  this account, at this time*, CodeRabbit reported **"up to 1 included
+  review per hour; 0 remain"** — despite the documented plan number (Pro+
+  "10 reviews/hour") — and that its docs describe the hourly allowance as
+  adaptive over a 7-day window. The production invariant to carry is:
+  review capacity is dynamic and must not be hard-coded (neither 1/hour
+  nor 10/hour is a governor semantic); RATE_LIMITED is an ordinary
+  fail-closed provider state; any provider-supplied retry/recovery time is
+  advisory display information, never a scheduling guarantee.
 * **The sticky comment is not an evidence carrier:** one comment id
   (5364754026) was observed as placeholder → walkthrough → placeholder+
   walkthrough interleaved (new Run ID) → +rate-limit warning block, via
   in-place edits, with a scope marker (`up to \`1bc80\``) still naming head
   A while the true head was C. Comment surfaces mutate and lag; only
   review objects carry `commit_id`.
-* **Clean case (round 3): [PENDING — to be captured when the included
-  review budget recovers at ~04:15Z]**
+* **Clean case: NOT OBSERVED.** Round 3 (stable head C, budget recovered
+  exactly when the round-2 notice predicted) delivered a *third findings
+  capture* instead: `Actionable comments posted: 1`, `commit_id` = head C —
+  a legitimate Major/Data-Integrity finding that PROBE.md's numbered
+  protocol contradicts its own appended round log (true: the probe
+  improvised the head-C push mid-flight and never reconciled the text).
+  The actionable-count marker is now confirmed across N=2 and N=1, both
+  head-bound via `commit_id`, with per-run Run IDs and full-SHA range
+  attestations — but the **N=0 review shape has never been observed** and
+  CodeRabbit CLEAN therefore remains unproven.
+* **Commit status is completion, not cleanliness (round 3):** the round-3
+  run set a plain commit **status** (`context: "CodeRabbit"`,
+  `state: success`, `description: "Review completed"`) on head C — while
+  the same run posted 1 actionable finding. No check runs were created by
+  either provider (`check_runs total_count: 0` on head C). Any gate wired
+  to CodeRabbit's own status context would pass a findings review; the
+  governor deliberately does not consume it as evidence.
 
 ### 3.3 Trigger semantics — OBSERVED
 
@@ -249,8 +271,12 @@ auto-review disabled ("fewer than 10 stars"), manual trigger required.
    from prior art; Codex was installed here, so no-start was never
    reproduced.
 4. **CodeRabbit clean review shape.** `Actionable comments posted: 0` with
-   `commit_id` = head is the expected carrier; **round 3 pending**. Until
-   observed, CodeRabbit CLEAN is unproven.
+   `commit_id` = head is the expected carrier, inferred from the observed
+   N=2 and N=1 reviews — but the N=0 instance was never observed (round 3
+   produced a real finding instead). Until a genuine N=0 capture exists,
+   CodeRabbit CLEAN is unproven and the reducer's CLEAN path for this
+   provider rests on an inference, which is exactly what §12 refuses to
+   enforce on.
 5. **CodeRabbit behaviour on synchronize mid-run** — whether an in-flight
    full review re-targets a newly pushed head (Codex does) or completes
    against the requested head. Round 2 was refused before this could be
@@ -356,7 +382,8 @@ this generation's request comment, strictly after request time, not vetoed
 by an eyes at-or-after it; an APPROVED/clean-bodied review with
 `commit_id == head` and zero inline comments.
 
-CodeRabbit (expected, **round-3 pending**):
+CodeRabbit (expected shape — **NOT OBSERVED**; inferred from the observed
+N=2/N=1 reviews and therefore not enforceable, see §12):
 
 ```
 pull_request_review, actor id == 136622811
@@ -378,8 +405,9 @@ path other than the above.
 * CodeRabbit review with `Actionable comments posted: N>0` (OBSERVED), or
   `CHANGES_REQUESTED`, or inline comments on an unparseable review;
 * Codex review with inline comments (OBSERVED) or `CHANGES_REQUESTED`;
-  each Codex inline comment is independently FINDINGS (Codex posts only
-  P0/P1);
+  an admitted Codex-authored inline review comment is FINDINGS evidence
+  with **no severity precondition** — badge text (P1/P2 observed round 1,
+  despite the docs' "P0 and P1" wording) is provider prose, not contract;
 * SHA-mismatched variants of the above are STALE, not FINDINGS, for this
   epoch.
 
@@ -408,10 +436,12 @@ own disposable files and is closed unmerged.
 3. **CodeRabbit CLEAN observed** (round 3) and re-observed after any
    provider-side format change; the fixtures in `tests/fixtures/` are the
    regression bar.
-4. **Budget-aware rounds:** with ~1 included CodeRabbit review/hour, a
-   final-review label applied more than once an hour rate-limits; the
-   governor must surface RATE_LIMITED verdicts and the provider's own
-   recovery time rather than retrying.
+4. **Budget-aware rounds without hard-coded capacity:** CodeRabbit's
+   allowance is dynamic (observed 1/hour on this account against a
+   documented 10/hour; docs call it adaptive). The governor treats
+   RATE_LIMITED as an ordinary fail-closed provider state, surfaces the
+   provider's own recovery text as advisory information only, and never
+   schedules against an assumed capacity.
 5. **Reaction observability** if the Codex 👍 path is ever load-bearing:
    an authenticated reactions listing (actor + created_at) on a poll loop,
    since no webhook exists.
@@ -426,20 +456,76 @@ own disposable files and is closed unmerged.
 
 | round | head | trigger time | CodeRabbit outcome | Codex outcome |
 |---|---|---|---|---|
-| 1 | A `1bc8038d` | 03:15:11/15Z | FINDINGS: review 4989406397, "Actionable comments posted: 2", commit_id=A | FINDINGS: review 4989404627, commit_id=A, 2 inline P1/P2 |
+| 1 | A `1bc8038d` | 03:15:11/15Z | FINDINGS: review 4989406397, "Actionable comments posted: 2", commit_id=A | FINDINGS: review 4989404627, commit_id=A, 2 inline (P1, P2) |
 | 2 | B `d9796425` (C pushed +11s) | 03:19:31/34Z | RATE_LIMITED: ack 5364784582 edited to "Action not completed / Review rate limited" | CLEAN **for C**: comment 5364792938, "Reviewed commit: ff74f6f34d" — STALE for the B-epoch |
-| 3 | C `ff74f6f3` | *pending ~04:16Z* | *pending: expected "Actionable comments posted: 0" + commit_id=C* | *pending* |
+| 3 | C `ff74f6f3` (stable, verified before and after) | 04:16:23/27Z | FINDINGS: review 4989640993, "Actionable comments posted: 1", commit_id=C (+ commit status "success / Review completed" set by the same run) | CLEAN: comment 5365138092, "Reviewed commit: ff74f6f34d", fresh generation |
 
-Shadow verdicts replayed from real payloads: round 1 → BLOCKED; round 2 →
-STALE (gen 2) / INCONCLUSIVE (head C, no requested round); round 3 →
-*pending*.
+Shadow verdicts replayed from real payloads
+(`tests/test_live_fixtures.py`): round 1 → **BLOCKED**; round 2 → **STALE**
+(gen 2) / **INCONCLUSIVE** (head C: provider-attested clean without a
+requested round does not count); round 3 → **BLOCKED** (one provider clean
+is not enough). The intended CodeRabbit clean capture did not occur — its
+finding about the probe was real.
 
 ## 12. Production recommendation
 
-**[PENDING — finalized after round 3.]**
+The two questions are deliberately separated, so a successful provider
+experiment cannot be mistaken for production authority:
 
-The recommendation will be NOT_READY_FOR_ENFORCEMENT unless every clause of
-§8's CLEAN contracts has at least one captured observation, and will remain
-NOT_READY in any case until the §10 prerequisites (governor App identity,
-trigger authority, reconciliation loop) exist — the shadow pilot itself has
-no identity that could publish the required check today.
+```
+PROVIDER_CONTRACT_PILOT:   PARTIAL
+PRODUCTION_ENFORCEMENT:    NOT_READY_FOR_ENFORCEMENT
+```
+
+### PROVIDER_CONTRACT_PILOT: PARTIAL
+
+Measured and replayable from real payloads (PASS components): both actor
+identities; both trigger commands under an owner-user actor; Codex FINDINGS
+(review + inline, `commit_id` + body attestation) and Codex CLEAN (comment
+carrier with reviewed-SHA attestation, twice, with a stable machine prefix
+across varying flavor text); Codex late-binding to the head current at run
+time; CodeRabbit FINDINGS (actionable count N=2 and N=1, head-bound, with
+Run IDs and full-SHA range attestations); CodeRabbit hard rate limit
+(edit-delivered) vs soft fair-usage ack; ack/walkthrough edit mechanics;
+completion signals (comment text *and* commit status) proven distinct from
+cleanliness; stale-head semantics end-to-end including a real mid-flight
+head change.
+
+Not observed (the PARTIAL): the CodeRabbit **N=0** clean review; the Codex
+**+1 reaction** clean; Codex no-start bodies. The reducer's CodeRabbit
+CLEAN path rests on inference from N=2/N=1 — strong inference, still
+inference.
+
+### PRODUCTION_ENFORCEMENT: NOT_READY_FOR_ENFORCEMENT
+
+Independent of provider evidence, the control-plane contract is unproven:
+
+* App-authored `@codex review` acceptance — unmeasured;
+* App-authored `@coderabbitai full review` acceptance — unmeasured;
+* a real installation-webhook `pull_request.synchronize` path — never
+  exercised (the pilot drove staleness from git state);
+* governor-owned `ai/final-review` Check Run publication and
+  expected-source enforcement — impossible with the pilot's OAuth identity
+  (checks are App-only);
+* the reconciliation loop under a real App credential — absent.
+
+Round 3 could at best have closed the provider CLEAN evidence contract; it
+cannot close the GitHub App control-plane contract, and it did not close
+the CodeRabbit clean contract either. Enforcing `ai/final-review` today
+would gate merges on two inferences and an absent identity. Per the
+pilot's own rule — the model is not weakened for a green result.
+
+### Minimal next experiments (in order)
+
+1. **CodeRabbit N=0 capture:** on a throwaway PR whose only change is a
+   trivially clean file, run `@coderabbitai full review` once (after budget
+   recovery); capture the review object; if the body is *not*
+   `Actionable comments posted: 0`, correct the adapter from the capture,
+   not the other way around.
+2. **App-authored trigger probe:** install a minimal governor GitHub App on
+   a sandbox repository; post both trigger commands from the installation
+   token; measure ack/eyes/terminal within a fixed window. This
+   single experiment resolves §10's items 1–2 and unlocks check-run
+   publication and the webhook path with the same credential.
+3. Only then: wire the shadow check run from the App, run a multi-week
+   canary in shadow, and revisit this recommendation.
