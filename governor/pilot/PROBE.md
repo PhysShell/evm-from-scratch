@@ -26,3 +26,9 @@ This PR is closed without merging once captures are complete. The captured,
 sanitized artifacts and the resulting analysis live on the
 `claude/ai-final-review-governor-pilot-vohn85` branch
 (`governor/`, `docs/ai-final-review-pilot.md`).
+
+## Round log
+
+- Head A round captured findings artifacts from both providers.
+- Head C was pushed deliberately while the head-B round was in flight, to
+  capture how late provider results relate to a superseded head.
