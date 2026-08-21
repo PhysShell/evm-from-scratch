@@ -172,6 +172,28 @@ class ReactionContractTest(unittest.TestCase):
 
 
 class CodexCarrierTest(unittest.TestCase):
+    def test_inline_comment_is_findings_regardless_of_severity_badge(self):
+        """Finding admission must not depend on severity badge text. Docs
+        say "P0 and P1 only"; round 1 (PR #11) delivered a P2 badge. Any
+        admitted Codex inline comment is findings evidence."""
+        from .helpers import review_comment
+
+        ctx = make_ctx(Provider.CODEX)
+        bodies = [
+            "**![P0 Badge](x)  Critical**\n\nboom.",
+            "**![P1 Badge](x)  Return true only when the heads match**\n\n...",
+            "**![P2 Badge](x)  Create a fresh accumulator for every call**\n\n...",
+            "no badge at all, plain prose finding",
+        ]
+        for body in bodies:
+            ev, rej = codex.classify_review_comment(
+                review_comment(CODEX_ACTOR, SHA1, 5, body=body), ctx
+            )
+            self.assertIsNone(rej)
+            self.assertEqual(
+                ev.classification, ProviderState.FINDINGS, f"body={body[:30]!r}"
+            )
+
     def test_review_with_inline_comments_is_findings(self):
         ctx = make_ctx(Provider.CODEX)
         ev, _ = codex.classify_review(

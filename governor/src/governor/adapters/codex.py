@@ -4,8 +4,10 @@ Trigger: an issue comment with the exact body ``@codex review``.
 
 Documented behaviour (learn.chatgpt.com/docs/third-party/github, fetched
 2026-08-21): Codex acknowledges with an "eyes" reaction and "posts a review"
-— a standard pull-request review with inline comments, restricted to P0/P1
-issues. The docs do **not** document the clean-case carrier, the posting bot
+— a standard pull-request review with inline comments. The docs claim it
+"flags only P0 and P1 issues"; observed round 1 delivered a P2-badged
+inline comment, so severity wording is not part of this adapter's contract.
+The docs do **not** document the clean-case carrier, the posting bot
 account, or behaviour across head changes.
 
 Empirical priors (Joey-Tools/codex-review-gate v2 evidence-authority
@@ -163,9 +165,12 @@ def classify_review_comment(
     """Classify a Codex-authored inline review comment.
 
     Codex has no structured finding count; its inline comments *are* the
-    findings, so each admitted one is terminal FINDINGS evidence. The
-    comment's ``commit_id`` (the SHA it anchors to) provides the head
-    binding; a mismatch classifies as STALE.
+    findings, so each admitted one is terminal FINDINGS evidence — with no
+    severity precondition. (Codex docs speak of P0/P1; round 1 delivered a
+    P2-badged comment. Badge text is provider prose, not contract: any
+    admitted Codex inline comment counts.) The comment's ``commit_id`` (the
+    SHA it anchors to) provides the head binding; a mismatch classifies as
+    STALE.
     """
     rej = check_actor(Provider.CODEX, payload.get("user"))
     if rej:
@@ -183,7 +188,7 @@ def classify_review_comment(
         )
     else:
         classification = ProviderState.FINDINGS
-        detail = "inline review comment (Codex posts only P0/P1 findings)"
+        detail = "admitted Codex-authored inline review comment is findings evidence"
 
     return (
         Evidence(
