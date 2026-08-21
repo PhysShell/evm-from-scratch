@@ -286,6 +286,24 @@ class CodeRabbitCarrierTest(unittest.TestCase):
         res = resolve_provider_state([ev])
         self.assertEqual(res.state, ProviderState.PENDING)
 
+    def test_verbatim_captured_ack_is_ack_not_terminal(self):
+        """Verbatim ack body captured on PR #11 (comment 5364757871,
+        2026-08-21T03:15:21Z) — note singular 'Action performed'."""
+        body = (
+            "\n\n`@PhysShell`: I will perform a full review of pull request "
+            "`#11`.\n\n\nAction performed\n\nFull review triggered.\n\n"
+        )
+        ctx = make_ctx(Provider.CODERABBIT)
+        ev, rej = coderabbit.classify_issue_comment(
+            issue_comment(CODERABBIT_ACTOR, body, 5), ctx
+        )
+        self.assertIsNone(rej)
+        from governor.model import EvidenceRole
+
+        self.assertEqual(ev.role, EvidenceRole.ACK)
+        res = resolve_provider_state([ev])
+        self.assertEqual(res.state, ProviderState.PENDING)
+
     def test_inline_comment_is_not_independent_finding(self):
         ctx = make_ctx(Provider.CODERABBIT)
         from .helpers import review_comment

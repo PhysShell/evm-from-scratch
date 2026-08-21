@@ -44,6 +44,22 @@ TRIGGER_BODIES: Dict[Provider, str] = {
     Provider.CODERABBIT: coderabbit.TRIGGER_BODY,
 }
 
+
+def is_trigger_body(provider: Provider, body: Optional[str]) -> bool:
+    """True iff ``body`` is this provider's trigger command.
+
+    Observed 2026-08-21 on PR #11: the pilot's comment transport appends an
+    attribution footer, so the posted body is the command plus trailing
+    lines — and CodeRabbit accepted the command anyway (ack comment
+    5364757871, 10s after trigger comment 5364756884). Own-trigger
+    recognition therefore matches on the first non-empty line, not on exact
+    body equality.
+    """
+    if body is None:
+        return False
+    lines = [ln.strip() for ln in body.strip().splitlines() if ln.strip()]
+    return bool(lines) and lines[0] == TRIGGER_BODIES[provider]
+
 #: How long reconciliation keeps waiting for an unconfirmed comment to show
 #: up in listings before a complete listing may prove absence.
 RECONCILE_WINDOW = timedelta(minutes=15)
@@ -125,7 +141,6 @@ def reconcile_unknown_request(
     """
     if run.request_state != RequestState.REQUEST_OUTCOME_UNKNOWN:
         return run
-    body_expected = TRIGGER_BODIES[run.provider]
     window_start = parse_ts(run.requested_at)
     window_end = window_start + RECONCILE_WINDOW
 
@@ -133,7 +148,7 @@ def reconcile_unknown_request(
         c
         for c in comments
         if (c.get("user") or {}).get("id") == governor_actor_id
-        and (c.get("body") or "").strip() == body_expected
+        and is_trigger_body(run.provider, c.get("body"))
         and window_start <= parse_ts(c["created_at"]) <= window_end
     ]
     if len(matches) == 1:

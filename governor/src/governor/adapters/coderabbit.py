@@ -45,7 +45,13 @@ TRIGGER_BODY = "@coderabbitai full review"
 _ACTIONABLE_RE = re.compile(r"Actionable comments posted:\s*(\d+)")
 
 _RATE_LIMIT_RE = re.compile(r"rate.?limit", re.IGNORECASE)
-_ACK_RE = re.compile(r"(Full review triggered|Actions performed|I will re-?review)", re.IGNORECASE)
+# "Action performed" observed singular on PR #11 (comment 5364757871,
+# 2026-08-21): "I will perform a full review of pull request `#11`. /
+# Action performed / Full review triggered."
+_ACK_RE = re.compile(
+    r"(Full review triggered|Actions? performed|I will (perform a full review|re-?review))",
+    re.IGNORECASE,
+)
 _PLACEHOLDER_RE = re.compile(r"(Review available on request|Trigger review)")
 _WALKTHROUGH_RE = re.compile(r"#+\s*Walkthrough")
 _FINISHED_RE = re.compile(r"full review (finished|completed?)", re.IGNORECASE)

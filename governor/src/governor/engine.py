@@ -340,9 +340,9 @@ class ShadowGovernor:
     def _reconcile_own_comment(
         self, repository_id: int, pr_number: int, comment: dict, now: str
     ) -> List[str]:
-        body = (comment.get("body") or "").strip()
-        for provider, expected in trigger_mod.TRIGGER_BODIES.items():
-            if body != expected:
+        body = comment.get("body")
+        for provider in trigger_mod.TRIGGER_BODIES:
+            if not trigger_mod.is_trigger_body(provider, body):
                 continue
             current = self.store.current_epoch(repository_id, pr_number)
             if current is None:
