@@ -1,0 +1,9 @@
+{
+  "_capture": "PhysShell/evm-from-scratch PR #11, round 2 CodeRabbit HARD RATE-LIMIT refusal — the SAME comment 5364784582, EDITED at 03:20:01Z (issue_comment.edited): 'Action not completed / Review rate limited.' A created-only listener never sees this refusal. Body verbatim, details tags flattened.",
+  "id": 5364784582,
+  "user": {"login": "coderabbitai[bot]", "id": 136622811, "type": "Bot"},
+  "created_at": "2026-08-21T03:19:44Z",
+  "updated_at": "2026-08-21T03:20:01Z",
+  "author_association": "NONE",
+  "body": "`@PhysShell`: I will perform a full review of pull request `#11`.\n\n⚠️ Action not completed\n\nReview rate limited.\n\n---\n\nYour included review limit is currently reached under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy). This review may still proceed through usage-based billing if eligible. Your next included review will be available in 55 minutes.\n"
+}

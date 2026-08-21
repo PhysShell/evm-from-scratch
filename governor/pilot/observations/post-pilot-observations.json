@@ -1,0 +1,26 @@
+{
+  "capture_note": "Unsolicited captures on PR #12 (the pilot's own draft deliverable PR), 2026-08-21T04:37Z — after the controlled pilot on PR #11 had closed. Both arrived on PR open, with no trigger comment posted.",
+  "codex_no_start_observed": {
+    "carrier": "issue_comment.created",
+    "author": {"login": "chatgpt-codex-connector[bot]", "id": 199175422},
+    "created_at": "~2026-08-21T04:37:57Z",
+    "body_verbatim": "To use Codex here, [create an environment for this repo](https://chatgpt.com/codex/cloud/settings/environments).",
+    "notes": [
+      "byte-identical to NO_START_BODIES[0] from the Joey-Tools/codex-review-gate v2 contract — upgraded from prior-art-only to OBSERVED",
+      "posted spontaneously on draft-PR open (Codex self-documents 'Open a pull request for review' as a trigger); no @codex mention existed on PR #12",
+      "surprising coexistence: mention-triggered reviews on PR #11 ran fine ~20 minutes earlier on the same repository — no-start appears to be path- or head-dependent (auto-review-on-open vs mention, or branch/environment scoping); the mechanism difference is an open question",
+      "the adapter already classified this exact body as UNAVAILABLE; the classification is now evidence-backed for body #1 (body #2 remains unobserved)"
+    ]
+  },
+  "coderabbit_draft_skip_observed": {
+    "carrier": "issue_comment.created",
+    "author": {"login": "coderabbitai[bot]", "id": 136622811},
+    "created_at": "~2026-08-21T04:37:58Z",
+    "body_markers": ["## Review skipped", "Draft detected.", "To trigger a single review, invoke the `@coderabbitai review` command.", "Run ID: af227e6f-1805-4f95-a1f0-4077aa0b2f82"],
+    "notes": [
+      "a previously unobserved placeholder variant: draft PRs are excluded from auto-review and get 'Review skipped / Draft detected' instead of 'Review available on request'",
+      "classification-wise it is informational (contains the 'Trigger review' checkbox marker) and is created before any request, so admission timing excludes it anyway",
+      "the pilot's probe PR #11 was deliberately non-draft, which is why this shape never appeared during the controlled rounds"
+    ]
+  }
+}

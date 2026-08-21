@@ -1,0 +1,10 @@
+{
+  "_capture": "PhysShell/evm-from-scratch PR #11, round 3 CodeRabbit review — FINDINGS (N=1) bound to head C. Captured live 2026-08-21. Sanitized: agent-prompt/autofix/marketing blocks elided as [...]; load-bearing markers verbatim. Note: the same run also set commit status 'CodeRabbit: success / Review completed' — completion, not cleanliness.",
+  "id": 4989640993,
+  "user": {"login": "coderabbitai[bot]", "id": 136622811, "type": "Bot"},
+  "state": "COMMENTED",
+  "commit_id": "ff74f6f34d10527ff357ebf75b43914722ad1588",
+  "submitted_at": "2026-08-21T04:19:17Z",
+  "author_association": "NONE",
+  "body": "**Actionable comments posted: 1**\n\n[...]\n\n**Configuration used**: defaults\n\n**Review profile**: CHILL\n\n**Plan**: Pro Plus\n\n**Run ID**: `af803a4a-241d-439c-9164-c374107ef143`\n\n[...]\n\nReviewing files that changed from the base of the PR and between 047ff1a641e33e0bb8c6b9eea26bb80eea021e08 and ff74f6f34d10527ff357ebf75b43914722ad1588.\n\n[...]\n\n**Included review availability:** Your plan provides up to 1 included review per hour; 0 remain after this review.\n"
+}

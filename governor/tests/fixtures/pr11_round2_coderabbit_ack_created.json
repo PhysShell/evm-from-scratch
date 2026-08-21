@@ -1,0 +1,9 @@
+{
+  "_capture": "PhysShell/evm-from-scratch PR #11, round 2 CodeRabbit ack AS CREATED (03:19:44Z) — 'Action performed / Full review triggered' plus the SOFT fair-usage warning. The review had NOT been refused at this point; 17s later this same comment was edited into the hard refusal (see pr11_round2_coderabbit_ack_edited.json). Body verbatim, details tags flattened.",
+  "id": 5364784582,
+  "user": {"login": "coderabbitai[bot]", "id": 136622811, "type": "Bot"},
+  "created_at": "2026-08-21T03:19:44Z",
+  "updated_at": "2026-08-21T03:19:44Z",
+  "author_association": "NONE",
+  "body": "`@PhysShell`: I will perform a full review of pull request `#11`.\n\nAction performed\n\nFull review triggered.\n\n---\n\nYour included review limit is currently reached under our [Fair Usage Limits Policy](https://docs.coderabbit.ai/management/plans#fair-usage-limits-policy). This review may still proceed through usage-based billing if eligible. Your next included review will be available in 55 minutes.\n"
+}
