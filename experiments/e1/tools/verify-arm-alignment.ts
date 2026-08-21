@@ -4,10 +4,10 @@
  * The search targets discovery arms by ORDINAL, so the identity of every witness and of the
  * stopping arm rests on the k-th arm of a file being the same arm in both instrumentations.
  *
- * `checkAlignment` compares per-file type SEQUENCES, and that is too weak to establish it: a
- * permutation among adjacent same-typed arms passes unchanged, and `src/jmp.ts` alone opens
- * `binary-expr, binary-expr, if, if`. Re-running the search does not help either, because the
- * rerun goes through the same matcher.
+ * The rejected predecessor of this check — since deleted — compared per-file type SEQUENCES,
+ * and that is too weak to establish it: a permutation among adjacent same-typed arms passes
+ * unchanged, and `src/jmp.ts` alone opens `binary-expr, binary-expr, if, if`. Re-running the
+ * search did not help either, because the rerun went through the same matcher.
  *
  * This checks each arm on its own. It takes the in-memory `branchMap` position — which is a
  * generated-JS position — maps it back through the transpiler's source map, and compares the

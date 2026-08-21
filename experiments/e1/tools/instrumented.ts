@@ -50,8 +50,11 @@ function load(name: string): Record<string, unknown> {
   });
   // The map is passed because istanbul stores it in the coverage object, where a consumer
   // that wants source positions can use it. It does NOT rewrite branchMap positions, so the
-  // positions here remain generated-JS positions — which is why arms are aligned to the
-  // discovery run by ORDER (`armsByFile` / `checkAlignment`) and not by position.
+  // positions in `branchMap` remain generated-JS positions. The map is therefore ALSO kept in
+  // `sourceMaps` above, because that is what `armSourcePositions` reads: arms are targeted by
+  // ordinal, and `validateAlignment` establishes that ordinal arm by arm by mapping each
+  // generated-JS position back to TypeScript through this map and comparing it with the
+  // position the discovery run recorded for the same ordinal.
   const inputSourceMap = out.sourceMapText === undefined
     ? undefined
     : (JSON.parse(out.sourceMapText) as Record<string, unknown>);
@@ -104,12 +107,12 @@ export function covered(before: Map<string, number>, after: Map<string, number>)
 /**
  * Map every instrumented arm's generated-JS position back to its TypeScript position.
  *
- * This is the independent check that the ordinal correspondence is real. `checkAlignment`
- * compares per-file type SEQUENCES, which a permutation among adjacent same-typed arms would
- * pass — and `jmp.ts` alone opens `binary-expr, binary-expr, if, if`, so that is not a
- * hypothetical. Mapping each arm's own position through the source map and comparing it with
- * the position the discovery run recorded for the same ordinal establishes arm identity
- * one arm at a time, without going through the matcher being checked.
+ * This is the independent check that the ordinal correspondence is real. Its rejected
+ * predecessor — since deleted — compared per-file sequences of istanbul `type` strings, which
+ * a permutation among adjacent same-typed arms would pass; `jmp.ts` alone opens
+ * `binary-expr, binary-expr, if, if`, so that was not a hypothetical. Mapping each arm's own
+ * position through the source map and comparing it with the position the discovery run
+ * recorded for the same ordinal establishes arm identity one arm at a time instead.
  */
 export async function armSourcePositions(
   rootRelative: (p: string) => string,
