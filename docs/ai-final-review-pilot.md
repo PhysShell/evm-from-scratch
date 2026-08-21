@@ -213,6 +213,11 @@ auto-review disabled ("fewer than 10 stars"), manual trigger required.
   nor 10/hour is a governor semantic); RATE_LIMITED is an ordinary
   fail-closed provider state; any provider-supplied retry/recovery time is
   advisory display information, never a scheduling guarantee.
+* **Draft PRs are auto-review-excluded (observed post-pilot):** on the
+  draft deliverable PR #12, CodeRabbit posted a previously unobserved
+  placeholder variant — *"Review skipped / Draft detected"* — offering the
+  manual command instead. The probe PR was deliberately non-draft, which is
+  why this shape never appeared in the controlled rounds.
 * **The sticky comment is not an evidence carrier:** one comment id
   (5364754026) was observed as placeholder → walkthrough → placeholder+
   walkthrough interleaved (new Run ID) → +rate-limit warning block, via
@@ -267,9 +272,18 @@ auto-review disabled ("fewer than 10 stars"), manual trigger required.
    actor-attributable. If future clean cases arrive reaction-only, a
    production governor needs the REST/GraphQL reactions listing (actor +
    created_at) on a poll loop.
-3. **Codex no-start bodies.** The two exact "To use Codex here…" bodies come
-   from prior art; Codex was installed here, so no-start was never
-   reproduced.
+3. **Codex no-start bodies — one of two now OBSERVED.** After the
+   controlled pilot closed, Codex spontaneously posted the exact
+   environment-missing body (`To use Codex here, [create an environment for
+   this repo](…)`) on the pilot's own draft PR #12 on open, with no mention
+   present — byte-identical to the prior-art text the adapter already
+   classified as UNAVAILABLE. The second body (account/connect) remains
+   unobserved. Open question: mention-triggered reviews on PR #11 ran fine
+   minutes earlier in the same repository, so no-start appears to depend on
+   the trigger path (auto-review-on-open vs mention) or branch/environment
+   scoping — the enforcement design must not assume "Codex worked once"
+   generalizes across trigger paths
+   (`governor/pilot/observations/post-pilot-observations.json`).
 4. **CodeRabbit clean review shape.** `Actionable comments posted: 0` with
    `commit_id` = head is the expected carrier, inferred from the observed
    N=2 and N=1 reviews — but the N=0 instance was never observed (round 3
@@ -492,9 +506,11 @@ cleanliness; stale-head semantics end-to-end including a real mid-flight
 head change.
 
 Not observed (the PARTIAL): the CodeRabbit **N=0** clean review; the Codex
-**+1 reaction** clean; Codex no-start bodies. The reducer's CodeRabbit
-CLEAN path rests on inference from N=2/N=1 — strong inference, still
-inference.
+**+1 reaction** clean; the second Codex no-start body (the first was
+observed post-pilot on PR #12, §4.3 — along with the fact that no-start
+can occur on one trigger path while mention-triggered reviews succeed on
+another). The reducer's CodeRabbit CLEAN path rests on inference from
+N=2/N=1 — strong inference, still inference.
 
 ### PRODUCTION_ENFORCEMENT: NOT_READY_FOR_ENFORCEMENT
 
