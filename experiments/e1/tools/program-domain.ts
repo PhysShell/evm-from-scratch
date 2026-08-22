@@ -1,8 +1,34 @@
 /**
- * `D_program` — the canonical finite program domain, E1-v5 §3.2 through §3.7.
+ * `D_program` — an ATTEMPT at the canonical finite program domain, E1-v5 §3.2 through §3.7.
  *
- * This module implements the frozen specification and nothing else. Two prohibitions from
- * §6.1 are structural rather than advisory, and are visible in the imports:
+ * ══════════════════════════════════════════════════════════════════════════════════════════
+ * NONCONFORMANCE WARNING — THIS DOMAIN DOES NOT IMPLEMENT FROZEN §3.4
+ *
+ * §3.4 assigns the `address` operand of CALL / STATICCALL / DELEGATECALL to the §8.2.1 ADDRESS
+ * domain. `render` pushes operands k = 0 … need-1, so k = need-1 ends on top, and
+ * `popOperands` consumes top-first in the §2 order `gas, address, …`. The address therefore
+ * belongs at k = need-2 — 5 for CALL, 4 for STATICCALL and DELEGATECALL. `addressOperand` is
+ * 1 for all three, so the address-domain value lands in `retOffset` and the `address` operand
+ * receives a plain uint256. Decoded at j = 1:
+ *
+ *     popOperands binds   address     0x1
+ *                         retOffset   0x1000000000000000000000000000000000000aaa
+ *
+ * This is wrong at the level of the program BYTES, so every consumer inherits it, and
+ * `d_program_digest` in M0-v5 is the digest of a domain that is not the frozen one.
+ *
+ * NOT REPAIRED. Correcting it changes the rendered bytes and hence the digest, which E1-v5's
+ * disposition (`STOP_PROTOCOL_POSTFREEZE_CHAIN_NONCONFORMANT`) forbids after measurement.
+ * E1-v6 must derive operand roles from one frozen operand schema fixing pop-order and type
+ * together, and check a generated CALL block structurally rather than let the generator
+ * confirm itself. See `docs/experiments/E1-v5-STOP.md` §4 and §9(f).
+ *
+ * Binding rule 5's replay does NOT catch this: it recomputes the digest by calling this same
+ * generator, so it establishes self-agreement, not conformance to §3.2–§3.7.
+ * ══════════════════════════════════════════════════════════════════════════════════════════
+ *
+ * Two prohibitions from §6.1 are structural rather than advisory, and are visible in the
+ * imports:
  *
  *   - it reads NO file. Every input is a literal below or an opcode byte from `src/opcodes`.
  *   - it imports nothing from `records/`. In particular `step6a-uncovered-arms.json` is not

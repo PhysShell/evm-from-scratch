@@ -1,128 +1,192 @@
-# E1-v5 — STOP_PROTOCOL_STEP6A_NONCONFORMANT
+# E1-v5 — STOP_PROTOCOL_POSTFREEZE_CHAIN_NONCONFORMANT
 
-**Outcome:** E1-v5 halts at Step 2 §10 step 6a. `M1` was not written and no adjudicating
-figure was produced.
+**Outcome:** E1-v5 halts. `M1` was not written and no adjudicating figure was produced.
 
-**What the outcome means.** The **v5 freeze itself remains valid**; step 6a happened, and
-therefore finalised that freeze. But the step 6a *execution* is **not admissible as an
-execution of frozen §8.2.1/§8.2.2**. No `LT-BR-*` ID, candidate index, first-stop identity, or
-branch-search figure produced by that execution may be promoted to frozen-procedure evidence.
+**What the outcome means.** The v5 preregistration and its freeze event are valid and stand on
+their own. **Everything the protocol built after the freeze is nonconformant** — not only the
+step 6a search, but the artefact it consumed (`D_program`) and the replay that was supposed to
+bind the manifest to the protocol version. No figure, index, ID or digest produced downstream
+of the freeze may be promoted to frozen-procedure evidence.
 
-**Two independent reasons are preserved under that outcome**, and neither subsumes the other:
+An earlier version of this record named `STOP_PROTOCOL_STEP6A_NONCONFORMANT` as the whole
+disposition. That was still too narrow, and in a way that mattered: it implied one could keep a
+sound `M0` and a sound `D_program` and merely replace the branch search. That is no longer
+available. The defect is at the level of the post-freeze chain, so the outcome names that level;
+the earlier codes are preserved below as subordinate findings rather than erased.
 
-1. **The frozen procedure is underspecified** — no total inter-file arm order is defined.
-   Preserved as its own finding, `STOP_PROTOCOL_ARM_ORDER_UNDERSPECIFIED` (§2).
-2. **The executed search was nonconformant** with the parts of the generator that *were*
-   defined (§3).
-
-An earlier version of this record named reason 1 as the whole disposition. That was too
-narrow: it presented a specification defect as the only blocker while the execution that
-exposed it was itself not an execution of the specification.
-
----
-
-## 1. What was executed, and under what status
-
-The implementation iterated files in the order its coverage extractor produced them,
-alphabetically by repository-relative path:
+## 1. The chain, and where it breaks
 
 ```text
-call.ts -> dec.ts -> jmp.ts -> mem.ts -> opcodes.ts -> ret.ts -> run.ts -> sto.ts
+v5 preregistration + freeze event
+        │
+        │  VALID independently — §2
+        ▼
+f670258 freeze
+        │
+        ├── M0 / replay binding          NONCONFORMANT   §3
+        │     ├── version selector is self-supplied
+        │     └── D_program conformance never established
+        │
+        ├── D_program implementation     NONCONFORMANT   §4
+        │     └── CALL-family operand typing violates §3.4
+        │
+        └── Step 6a                      NONCONFORMANT   §5
+              ├── Frame.pc omitted
+              ├── U-HLT dimension invented
+              ├── mutable D_BYTES
+              ├── instrumentation provenance unbound
+              ├── tooling-gap false-verdict path
+              └── inter-file arm order underspecified
 ```
 
-Under that order, and only under it, the run reported:
+Two subordinate codes are preserved:
+
+- **`STOP_PROTOCOL_STEP6A_NONCONFORMANT`** — §5, the executed search did not implement the
+  parts of the generator that were defined.
+- **`STOP_PROTOCOL_ARM_ORDER_UNDERSPECIFIED`** — §5.6, an independent *specification* defect:
+  the frozen procedure does not determine its own result. It is not a consequence of any
+  implementation error and would survive a perfect implementation.
+
+## 2. What still stands, and why
+
+**The freeze event `f670258` is standing evidence** — but *not* because the generic manifest
+replay reported PASS. It stands because its topology and the §4.1 literal predicate can be
+established independently of any manifest: two parents, `^1 == 8f5aaed…`, the path absent at
+`^1`, present at `^2`, and the merged blob equal to the landed blob. Those are facts about the
+commit graph, checkable without trusting `M0`. §3 explains why the replay's own PASS is not what
+carries this.
+
+**The v5 preregistration is frozen and unrevised**, and step 6a finalised that freeze.
+
+**Clean Baseline B** is inherited unchanged and unmeasured. Every defect below is in the
+post-freeze tooling; none is in `src/`.
+
+## 3. Reason one — the M0/replay binding is nonconformant
+
+### 3.1 The version selector is supplied by the artefact being checked
+
+`manifest-replay.ts` holds the freeze literals as a table and then selects the row with
+
+```ts
+const literals = FREEZE_LITERALS[m0.experiment_version ?? ''];
+```
+
+The manifest does not supply `base` or `path` — but it supplies the **selector for the criteria
+set** against which its own `base`, `path` and freeze SHA are then judged. The file's own comment
+argues this is safe because "a manifest that named the wrong version would be judged against that
+version's base and path, and its own freeze merge introduces neither". That holds only for an
+*incoherent* mis-declaration. A coherent one — version, base, path and freeze SHA all moved
+together to a genuine older freeze — passes.
+
+Demonstrated, with a manifest carrying the v5 `program_domain` block and E1-v3 freeze fields:
 
 ```text
-budget                B = 4096
-|D_program|           37
-uncovered arms        45          from the 213 core tests alone
-arm identity          103 by source position, 20 by matched sibling, 0 disagree
+freeze event bd363066c900 — E1-v3 §3.1
+ok    manifest freeze_base_sha matches the frozen literal
+ok    manifest freeze_path matches the frozen literal
+ok    freeze (a)…(e)                      all PASS
+ok    freeze ordering: HEAD is a descendant of the freeze
 
-LT-BR-U-CALL-001      src/call.ts:44:42 binary-expr#1     candidate 796
-LT-BR-U-DEC-001       src/dec.ts:22:25  binary-expr#1     candidate 1
-NO_FROZEN_BRANCH_WITNESS
-                      src/jmp.ts:17:27  binary-expr#1
+program domain — E1-v5 §3.7, binding rule 5
+ok    |Σ| … |D_program| … d_program_digest … §3.9 all 37 members
+
+manifest replay: M0 agrees with every primary source
 ```
 
-> **These figures are NON-ADMISSIBLE PROTOCOL EVIDENCE.**
->
-> They are preserved as a historical observation of one tool in one environment. They are
-> **not** §8.2.2 results. The `LT-BR-*` IDs above are not allocated; the candidate indices are
-> not frozen indices; the first stop is not the frozen procedure's first stop. The same applies
-> to the `103 / 20 / 0` alignment figures and to the candidate-11 `RangeError` in §4.
+Fully green while certifying the **v3** freeze under a v5 program-domain heading. Nothing binds
+the declared version to the file it came from, to the governing documents, or to anything outside
+the manifest. (The demonstration file was deleted and never committed.)
 
-**No `LT-BR-*` ID is selectively salvaged.** Reconstructing the frozen stream happens to place
-the U-CALL fixture inside the budget as well (§3.1), and that is *not* a reason to keep
-`LT-BR-U-CALL-001`. An ID allocated by a nonconformant run is not made frozen evidence by the
-observation that a conformant run might also have reached it.
+This does not unsettle `f670258` — §2 establishes that independently. What it unsettles is the
+claim that the generic replay reliably binds an arbitrary `M0` to the protocol version that `M0`
+declares.
 
-## 2. Reason one — the frozen procedure does not determine its own result
+### 3.2 Binding rule 5 was not discharged
 
-§8.2.2 iterates uncovered arms "in frozen source order" and §8.2 allocates `LT-BR-*` IDs "in
-ascending order of source position", but **no frozen text defines a total order between
-files.** Three concrete admissible orders are under discussion, and they yield three distinct
-results:
+Frozen §4.2 rule 5 requires:
+
+> `M0-v5` MUST additionally recompute `D_program` **from §3.2-§3.7** and record its member count
+> and digest…
+
+The replay recomputes the digest by calling the same `buildDomain()` that produced the recorded
+one. Since that implementation violates §3.4 (§4 below), the check establishes
+
+> *`M0` and this implementation of `buildDomain()` agree with each other*
+
+and **not**
+
+> *this implementation conforms to frozen §3.2–§3.7*
+
+Rule 5 promised the second. The replay's `|Σ|`, plain-block count, terminal-variant count,
+`|D_program|`, digest and sole-trailing-`JUMPDEST` results remain true **as properties of the
+artefact that was actually built** — an artefact that does not implement §3.4. They are not
+standing evidence that the `D_program` implementation is conformant, and this record no longer
+claims they are.
+
+## 4. Reason two — `D_program` does not implement frozen §3.4
+
+§3.4 assigns the `address` operand of `CALL` / `STATICCALL` / `DELEGATECALL` to the §8.2.1
+**address** domain, every other operand to the uint256 domain.
+
+`render()` pushes operands `k = 0 … need-1`, so `k = need-1` ends on top of the stack, and
+`popOperands` consumes top-first in the §2 order `gas, address, value, …`. The address therefore
+belongs at `k = need-2`:
 
 ```text
-executed alphabetical   call -> dec -> jmp -> ...   two witnesses emitted, then the jmp.ts
-                                                    arm exhausts B
-§1.3 unit order         U-DEC and U-JMP both precede U-CALL, so the run takes dec.ts's
-                        witness, reaches jmp.ts and stops — and LT-BR-U-CALL-001 is never
-                        emitted at all. The realised prefix of the ID allocation differs.
-mem.ts before jmp.ts    U-MEM's operand domain contains 2²⁵⁶ − 1, which asks the host for an
-                        allocation it cannot make; that is E1-v5 §3.10's evaluation stop, and
-                        it fires at candidate 11. The run ends with a preserved candidate
-                        index and error class instead of NO_FROZEN_BRANCH_WITNESS.
+CALL          need=7    gas k=6    address k=5
+STATICCALL    need=6    gas k=5    address k=4
+DELEGATECALL  need=6    gas k=5    address k=4
 ```
 
-Three admissible orders, three different outcomes, and the frozen procedure selects none of
-them.
-
-**This is not repaired in v5.** Step 6a was the first measured run, so adding a file-order rule
-now would choose, after seeing three candidate outcomes, which of them becomes the record —
-the precise move the freeze exists to prevent, and a worse instance of the one v4 was refused
-for.
-
-## 3. Reason two — the executed search did not implement the defined generator
-
-Where §8.2.1 and §1.3 *do* define the record, the tool departed from them. Four instances,
-each verified against the frozen text and by execution:
-
-### 3.1 `Frame.pc` omitted from the record
-
-§8.2.1 states "`Frame.memory` and `Frame.returndata` draw from `bytes`; **`Frame.pc` from
-`uint256`**", and, arguing for index-sum ordering, "**`Frame` has nine fields** and about
-295 000 combinations". `src/domain.ts` carries the binding comment `Declaration order is the
-§8.2.1 enumeration order`, with `pc` declared second of nine.
-
-`tools/branch-search.ts` has an eight-entry `FRAME_FIELDS` and hard-codes `pc: 0`. Every
-Frame-based unit — `U-RUN`, `U-CALL`, `U-STO`, `U-GRD`, `U-HLT`, `U-RET` — therefore enumerated
-a stream that is not the frozen stream. Replaying both, for the recorded U-CALL fixture:
+The generator fixes `addressOperand = 1` for all three. Decoded from a real member at `j = 1`,
+where the two domains differ:
 
 ```text
-index under the executed stream (pc omitted)      796
-index under the reconstructed frozen stream       886
+member p(1, STOP)                       j=1 -> address 0x…0aaa, uint256 1
+
+pushes before CALL (bottom -> top)      k=0  0x1
+                                        k=1  0x1000000000000000000000000000000000000aaa
+                                        k=2..6  0x1
+
+popOperands binds                       gas         0x1
+                                        address     0x1
+                                        value       0x1
+                                        argsOffset  0x1
+                                        argsSize    0x1
+                                        retOffset   0x1000…0aaa   <-- the address value
+                                        retSize     0x1
 ```
 
-### 3.2 `U-HLT` invents an input dimension
+The address-domain value lands in `retOffset`; the `address` operand receives a plain uint256.
+`k = 1` maps to `retOffset` in both the 7- and 6-operand layouts, so all three kinds are affected.
 
-Frozen §1.3 declares `U-HLT`'s inputs as **`frame, offset, len`**. The tool adds a `halt`
-field, so `U-HLT`'s candidate stream is not the frozen stream either.
+**This is wrong at the level of the program bytes**, not merely in how a later search consumed
+them — so it precedes step 6a in the chain and cannot be cured by replacing the search.
 
-The same field is also self-inconsistent: `exercise` passes `RETURN`/`REVERT` while `describe`
-reports `NORMAL`/`EXCEPTIONAL`, so a `U-HLT` witness would have recorded an input never
-supplied. Renaming the domain would make the report honest while leaving the stream wrong —
-the defect is the invented dimension, not the label.
+**Not repaired here.** Correcting `addressOperand` changes the rendered bytes, hence
+`d_program_digest`, hence `M0-v5`. `M0-v5` is not edited and the digest is not recomputed.
 
-For contrast, `U-RET`'s `halt` field **is** legitimate: §1.3 gives it `frame, a FrameResult`,
-and `FrameResult.halt` genuinely ranges over `NORMAL`/`EXCEPTIONAL`.
+## 5. Reason three — the step 6a execution is nonconformant
 
-### 3.3 The byte domain became runtime state
+Preserved from the previous disposition as a subordinate finding,
+`STOP_PROTOCOL_STEP6A_NONCONFORMANT`.
 
-`src/mem.ts` `ensure()` returns early when the buffer already covers the write, and `mstore`
-then writes **into that same buffer**. `D_BYTES[2]` is exactly one word, so it takes the early
-return. The `U-MEM` record hands the domain member in directly as owned state, and `frameFrom`
-does the same for `memory` and `returndata`. Executed against the real unit:
+**5.1 `Frame.pc` omitted.** §8.2.1 states "`Frame.pc` from `uint256`" and "`Frame` has nine
+fields"; `src/domain.ts` carries `Declaration order is the §8.2.1 enumeration order` with `pc`
+second of nine. `FRAME_FIELDS` has eight entries and `frameFrom` hard-codes `pc: 0`, so `U-RUN`,
+`U-CALL`, `U-STO`, `U-GRD`, `U-HLT` and `U-RET` all enumerated a non-frozen stream. Replaying
+both streams for the recorded U-CALL fixture: index **796** as executed, **886** under the
+reconstructed frozen stream.
+
+**5.2 `U-HLT` invents an input dimension.** Frozen §1.3 declares its inputs as
+`frame, offset, len`. The tool adds a `halt` field, and `exercise` passes `RETURN`/`REVERT` while
+`describe` reports `NORMAL`/`EXCEPTIONAL`. Relabelling would only make the report honest about a
+stream that is still wrong. (`U-RET`'s `halt` is legitimate — §1.3 gives it `frame, a
+FrameResult`.)
+
+**5.3 The byte domain became runtime state.** `ensure()` returns early when the buffer already
+covers the write and `mstore` then writes into it; `D_BYTES[2]` is exactly one word, and the
+`U-MEM` record hands the domain member in directly:
 
 ```text
 bytes[2] before   66,66,66,66,66,66,66,66 …
@@ -130,101 +194,73 @@ bytes[2] after    0,0,0,0,0,0,0,0 …
 same object       true
 ```
 
-One candidate destroys a member of the frozen domain for every later candidate and every later
-arm in the same process. A canonical finite domain is a constant of the procedure; here it was
-mutable state, and enumeration became history-dependent.
+One candidate destroys a frozen domain member for every later candidate and arm; enumeration
+became history-dependent.
 
-### 3.4 Instrumentation provenance was not bound
+**5.4 Instrumentation provenance unbound.** `istanbul-lib-instrument` (6.0.3) and `source-map`
+(0.7.6) fix arm enumeration order and arm positions, and therefore every ordinal — yet both are
+transitive, absent from `package.json` and absent from `M0-v5`'s `toolchain` set, which is the
+only thing replay checks.
 
-`istanbul-lib-instrument` (6.0.3) and `source-map` (0.7.6) are present only transitively —
-neither is declared in `package.json`, and neither appears in `M0-v5`'s `toolchain` set. The
-instrumenter fixes arm enumeration order and the source-map consumer fixes arm positions, so
-these two decide every ordinal that every witness and the stop are stated against.
+**5.5 A tooling gap can print as a verdict.** A missing `UnitRecord` or instrumentation entry
+falls through toward `unwitnessed`, which prints under the `NO_FROZEN_BRANCH_WITNESS — Step 2
+§8.2.2` heading. Both branches are unreachable in this run. Recorded, not repaired; `E1-v6` must
+fail closed.
 
-The committed lockfile preserves what happened *ex post*, but `manifest-replay` checks only
-names present in `m0.toolchain`. Those result-bearing versions were therefore not constrained
-by `M0`, and could have changed between `M0` and measurement while replay stayed green.
-
-## 4. Known implementation defect — a tooling gap can masquerade as a verdict
-
-A missing `UnitRecord` and a missing instrumentation entry both fall through toward
-`unwitnessed`, which the report prints under the `NO_FROZEN_BRANCH_WITNESS — Step 2 §8.2.2`
-heading. §8.2.2 defines that outcome for an arm no candidate covers within `B`; a tooling
-failure is not that.
-
-Both branches are unreachable in this run, so nothing recorded changes because of it. It is
-**recorded here as a known defect rather than repaired**, and `E1-v6` must fail closed instead.
-
-The candidate-11 `RangeError` in `U-MEM` is preserved on the same footing as everything else in
-§1 — a historical observation of this tool and environment, showing that the §3.10 condition is
-reachable in a unit whose operand domain contains `2²⁵⁶ − 1`. It is not a §8.2.2 result.
-
-## 5. What the `jmp.ts` arm is — preserved as a source observation
-
-```ts
-while (pc < code.length) {
-  const op = code[pc] ?? 0;          // the arm is the `?? 0`
-```
-
-The arm executes only when `code[pc]` is `undefined`, and the loop condition guarantees it is
-not. It exists because `noUncheckedIndexedAccess` types the index access as possibly-undefined,
-so the fallback is written for the type checker rather than to describe a reachable state.
-
-**The same idiom one file away is genuinely reachable.** `src/dec.ts:22` is also `code[pc] ?? 0`
-and is legitimately called past the end of code when a `PUSH` immediate is truncated —
-`SEM-DEC-3`, a frozen postcondition. Identical source, identical arm type, dead in `U-JMP` and
-live in `U-DEC`, and nothing in a coverage report distinguishes them.
-
-This is an observation about the source, readable without running anything, so it survives both
-reasons above. What it is **not** is a verdict the procedure delivered: §8.2.2 is explicit that
-"whether the arm was *truly* unreachable or merely unreached within `B` is not decided, and does
-not need to be".
-
-## 6. Arm identity — what was established, and what it now supports
-
-Every reported result targets arms by ordinal, so it means nothing unless the k-th arm of a
-file is the same arm in both instrumentations. That was established rather than assumed, and
-the first attempt at establishing it was rejected:
+**5.6 The inter-file arm order is underspecified.** `STOP_PROTOCOL_ARM_ORDER_UNDERSPECIFIED`,
+independent of every implementation defect above. §8.2.2 iterates "in frozen source order" and
+§8.2 allocates `LT-BR-*` "in ascending order of source position", but no frozen text defines a
+total order between files. Three concrete admissible orders give three distinct results:
 
 ```text
-REJECTED     comparing per-file sequences of istanbul `type` strings. A permutation among
-             adjacent same-typed arms passes unchanged, and src/jmp.ts alone opens
-             `binary-expr, binary-expr, if, if`. Re-running the search does not test this,
-             because the rerun goes through the same matcher.
-
-ESTABLISHED  each arm's own generated-JS position mapped back through the transpiler's
-             source map and compared with the TypeScript position the discovery run recorded
-             for that ordinal:
-                 103  matched by source position
-                  20  positionless implicit-else arms, each identified by a sibling that
-                      matched positionally — istanbul gives an `if`'s implicit else no
-                      location on either side
-                   0  disagreements
+executed alphabetical   two witnesses, then jmp.ts exhausts B
+§1.3 unit order         U-DEC and U-JMP precede U-CALL — LT-BR-U-CALL-001 never emitted
+mem.ts before jmp.ts    U-MEM's domain holds 2²⁵⁶−1 — the §3.10 evaluation stop, candidate 11
 ```
 
-`tools/verify-arm-alignment.ts` performs it and the search refuses to run when it fails. Under
-this disposition it establishes an internal correspondence within a nonconformant run — and,
-per §3.4, it does so under instrumentation versions `M0` never bound.
+Not repairable in v5: adding a file-order rule after measurement would choose which of three
+already-known outcomes becomes the record.
+
+## 6. The raw run — preserved, non-admissible
+
+```text
+LT-BR-U-CALL-001  src/call.ts:44:42  candidate 796
+LT-BR-U-DEC-001   src/dec.ts:22:25   candidate 1
+NO_FROZEN_BRANCH_WITNESS   src/jmp.ts:17:27
+arm identity      103 by source position, 20 by matched sibling, 0 disagree
+§3.10 reachable   candidate 11, U-MEM RangeError
+```
+
+> **NON-ADMISSIBLE PROTOCOL EVIDENCE.** A historical observation of one tool in one environment.
+> No `LT-BR-*` ID is allocated, no candidate index is a frozen index, no stop is the frozen
+> procedure's stop.
+
+**No ID is selectively salvaged.** The reconstructed frozen stream happening to reach the same
+U-CALL fixture inside budget is not a reason to keep `LT-BR-U-CALL-001`.
+
+Two source-level observations survive because they need no run: the `jmp.ts` `code[pc] ?? 0` arm
+cannot execute under `while (pc < code.length)`, while the identical idiom at `src/dec.ts:22` is
+reachable via `SEM-DEC-3` — dead in one unit, live in the other, indistinguishable in a coverage
+report. §8.2.2 decides no reachability question and neither does this record.
 
 ## 7. Scope
 
-**Nothing is established or refuted about boundary blindness.** No specimen was built, no
-defect was injected, and no calibration figure exists. `M1` does not exist, and **E1-v5 §7** —
-the preregistration's sequence, not §7 of this record — makes it a precondition for any
-adjudicating figure.
+**Nothing is established or refuted about boundary blindness.** No specimen was built, no defect
+was injected, no calibration figure exists. `M1` does not exist, and **E1-v5 §7** — the
+preregistration's sequence, not §7 of this record — makes it a precondition for any adjudicating
+figure.
 
-**Predictions P1–P4 are unadjudicated.** The run stopped at the third file in its own order,
-before any `U-RUN` dispatch arm, so P1 and P2 were never tested and P3/P3′ never arose.
+**Predictions P1–P4 are unadjudicated.**
 
-**Amendment `A2` is neither validated nor falsified by step 6a.** `A2` remains frozen and
-untouched, and neither defect above is about it. But its support may not be drawn from this
-run: the two witnesses are non-admissible, so they are not evidence for anything. What stands
-independently is binding rule 5's replay of `D_program` — and only the preregistered
-program-domain shape and properties that replay actually checks.
+**Amendment `A2` is neither validated nor falsified.** It remains frozen and untouched, and no
+defect above is about it. Its support cannot be drawn from this run: the two witnesses are
+non-admissible, and, with §3.2 and §4, **even its post-freeze implementation binding did not
+happen** — the artefact that was supposed to realise the amendment's program domain does not
+implement §3.4, and the replay that was supposed to establish conformance established only
+self-agreement.
 
-**Clean Baseline B stands**, inherited unchanged and unmeasured under v5, carrying the recorded
-limitation that at least 4 case IDs incompletely realise 2 frozen postconditions. Every defect
-above is in the search tooling; none is in `src/`.
+**Clean Baseline B stands**, inherited unchanged, carrying its recorded limitation that at least
+4 case IDs incompletely realise 2 frozen postconditions.
 
 ## 8. Preserved chain
 
@@ -233,42 +269,61 @@ above is in the search tooling; none is in `src/`.
    │
 2b640e7   the E1-v5 preregistration, reviewed
    │
-f670258   FREEZE EVENT (E1-v5) — §4.1 (a)-(e) all PASS, and still valid
+f670258   FREEZE EVENT (E1-v5) — valid, established independently of the replay
    │
-baf6eb3   M0-v5 and the D_program generator — no measurement
+baf6eb3   M0-v5 and the D_program generator — no measurement, and §3–§4 nonconformant
    │
-   └────── step 6a: executed, finalising the freeze, and NOT admissible as an execution
-           of frozen §8.2.1/§8.2.2
+   └────── step 6a: executed, finalising the freeze, and not admissible
 ```
 
-PR #8 closes this history. It merges as **history closure**, by ordinary merge preserving the
-audit chain — **not** as a successful measured step 6a.
+PR #8 merges as **history closure**, by ordinary merge preserving the audit chain — not as a
+successful measured step 6a.
 
 ## 9. Continuation — what `E1-v6` must freeze before executing anything
 
 ```text
-(a) a TOTAL ARM ORDER, determined by the specification alone — a rule over units, files and
-    positions that two independent implementers would realise identically — and frozen
-    without reference to which arms are currently red, since all three outcomes in §2 are
-    already known.
+(a) a TOTAL ARM ORDER determined by the specification alone, frozen without reference to which
+    arms are currently red, since all three outcomes in §5.6 are already known.
 
-(b) the exact PER-UNIT INPUT-RECORD CONSTRUCTION from §1.3 + §2, including `Frame.pc` and
-    with no invented dimensions.
+(b) the exact PER-UNIT INPUT-RECORD CONSTRUCTION from §1.3 + §2, including `Frame.pc` and with
+    no invented dimensions.
 
 (c) FRESH OR IMMUTABLE candidate values, so enumeration is history-independent.
 
-(d) EVERY RESULT-BEARING INSTRUMENTATION DEPENDENCY in the bound toolchain, and checked by
+(d) EVERY RESULT-BEARING INSTRUMENTATION DEPENDENCY in the bound toolchain and checked by
     replay — transitive presence is not binding.
 
-(e) FAIL-CLOSED treatment of missing records, missing arm mappings and tooling gaps, so a
-    tooling failure can never print as a frozen-procedure verdict.
+(e) FAIL-CLOSED treatment of missing records, missing arm mappings and tooling gaps.
+
+(f) OPERAND-ROLE BINDING derived from ONE frozen operand schema that fixes pop-order and type
+    together, rather than a hand-maintained `addressOperand` index — plus a simple independent
+    structural check of a generated CALL block, so the generator cannot confirm itself.
+
+(g) THE VERIFIER'S VERSION SPECIFIED OUTSIDE THE MANIFEST IT CHECKS. The blunt option is the
+    good one: a separate `verify-m0-v6.ts` holding a literal `EXPECTED_VERSION = 'E1-v6'`. A
+    generic `--expect` is acceptable only if the invocation carrying `--expect E1-v6` is itself
+    part of the frozen protocol.
 ```
 
 Prefer **one canonical record-schema source** from which the generator is constructed, rather
-than another handwritten table plus a checker for that table. Both defects in §3.1–§3.2 are
-exactly what a handwritten second copy produces.
+than another handwritten table plus a checker for that table. §4 and §5.1–§5.2 are all what a
+second handwritten copy produces.
 
-The question v6 already inherited stands, now third in line: **what the branch-completion rule
-does with an arm that cannot execute.** Step 0 §3.1.3 rule 2 asks for one test per uncovered
-branch; §8.2.2 turns an unwitnessable arm into a stop; neither anticipated arms that exist only
-to make an expression total.
+The oldest open question stands, now last in line: **what the branch-completion rule does with an
+arm that cannot execute.** Step 0 §3.1.3 rule 2 asks for one test per uncovered branch; §8.2.2
+turns an unwitnessable arm into a stop; neither anticipated arms that exist only to make an
+expression total.
+
+## 10. What the external round actually showed
+
+Codex did not find two more scattered bugs. It found **two forms of one disease**, and it is the
+disease this experiment exists to hunt:
+
+```text
+the implementation supplied its own interpretation of the spec     §4, §5.1, §5.2
+the verifier took its criterion selector from the artefact         §3.1
+```
+
+Both are ordinary ways for a careful human process to reach a green PASS. Neither survives being
+asked to prove itself mechanically — which is the entire point of the exercise, and the reason
+this stop is a result rather than a setback.

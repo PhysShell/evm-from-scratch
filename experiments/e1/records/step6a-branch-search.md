@@ -8,15 +8,21 @@ produces `E1-v6`. That remains true — the freeze is valid and was finalised he
 
 > ## THE FIGURES IN THIS RECORD ARE NON-ADMISSIBLE PROTOCOL EVIDENCE
 >
-> E1-v5's outcome is **`STOP_PROTOCOL_STEP6A_NONCONFORMANT`**. This execution is not
-> admissible as an execution of frozen §8.2.1/§8.2.2, for two independent reasons: the frozen
-> procedure does not define a total inter-file arm order (§7), and the tool did not implement
-> the parts of the generator that *were* defined (§8).
+> E1-v5's outcome is **`STOP_PROTOCOL_POSTFREEZE_CHAIN_NONCONFORMANT`**: everything the
+> protocol built after the freeze is nonconformant — the `M0`/replay binding, the `D_program`
+> artefact this run consumed, and this execution itself.
 >
-> Everything below is preserved as a **historical observation of one tool in one
-> environment**. No `LT-BR-*` ID here is allocated, no candidate index here is a frozen index,
-> and the first stop here is not the frozen procedure's first stop. See
-> [`E1-v5-STOP.md`](../../../docs/experiments/E1-v5-STOP.md).
+> This record covers the last of those three, preserved under the subordinate code
+> **`STOP_PROTOCOL_STEP6A_NONCONFORMANT`** (§8), which in turn contains the independent
+> specification defect **`STOP_PROTOCOL_ARM_ORDER_UNDERSPECIFIED`** (§7). The two defects
+> *above* this run in the chain — `D_program` violating frozen §3.4, and the replay's
+> self-supplied version selector — are recorded in
+> [`E1-v5-STOP.md`](../../../docs/experiments/E1-v5-STOP.md) §3–§4. **They mean this run's
+> inputs were already nonconformant before it started.**
+>
+> Everything below is a **historical observation of one tool in one environment**. No
+> `LT-BR-*` ID here is allocated, no candidate index here is a frozen index, and the first stop
+> here is not the frozen procedure's first stop.
 
 `M1` was not written and no adjudicating figure was produced.
 
@@ -32,8 +38,11 @@ inherited baseline 073074bc4aa2324457c8639a6f850fbc1f558ec3   clean Baseline B, 
 The permitted non-measurement integrity replay was run first: 329/329 green — 213 core, 49
 level-A oracle, 65 level-B oracle, with their length guards. It produced no figure.
 
-**The manifest's toolchain set does not cover the instrumentation** — see §8.4. That gap is
-one of the reasons this record is non-admissible, and it is not repaired here.
+**The manifest replay's PASS is not evidence that the inputs were conformant.** It recomputes
+`D_program` by calling the same generator that produced the recorded digest, so it establishes
+that `M0` and that generator agree with each other — not that the generator implements frozen
+§3.2–§3.7, which it does not (`E1-v5-STOP.md` §4). Its toolchain set also does not cover the
+instrumentation, see §8.4. None of this is repaired here.
 
 ## 2. Discovery coverage — the 213 core tests, and nothing else
 
@@ -106,8 +115,11 @@ run.ts -> sto.ts`.
 
 ```text
 budget          B = 4096 candidates per arm
-|D_program|     37, recomputed from §3.2-§3.7; digest and the sole-trailing-jumpdest
-                property checked by M0-v5 under binding rule 5
+|D_program|     37 members, as built. M0-v5 checked the digest and the sole-trailing-
+                jumpdest property under binding rule 5, but by calling the SAME generator —
+                so that is self-agreement, not conformance to §3.2-§3.7. The generator
+                violates §3.4 (`E1-v5-STOP.md` §4), so these candidates came from a domain
+                that is not the frozen one.
 records         per unit, from the §1.3 declared inputs typed by §2, enumerated in the
                 §8.2.1 index-sum order — EXCEPT where §8 records that they were not
 ```
@@ -274,9 +286,10 @@ preregistration's sequence, not §7 of this record — makes it a precondition f
 figure.
 
 **Amendment `A2` is neither validated nor falsified here.** It remains frozen and untouched, and
-neither reason above is about it — but its support may not be drawn from this run, because the
-two witnesses are non-admissible. What stands independently is binding rule 5's replay of
-`D_program`, and only the program-domain shape and properties that replay actually checks.
+no defect is about it — but its support may not be drawn from this run. The two witnesses are
+non-admissible, and binding rule 5's replay is not a substitute: it establishes only that `M0`
+and the generator agree with each other, while the generator itself violates §3.4. **A2's
+post-freeze implementation binding did not happen** (`E1-v5-STOP.md` §3.2, §4).
 
 **Clean Baseline B stands**, inherited and unmodified, carrying its recorded limitation: at
 least 4 case IDs incompletely realise 2 frozen postconditions

@@ -8,7 +8,11 @@
  * ══════════════════════════════════════════════════════════════════════════════════════════
  * NONCONFORMANCE WARNING — WHAT THIS TOOL PRINTS IS NOT PROTOCOL EVIDENCE
  *
- * E1-v5's outcome is `STOP_PROTOCOL_STEP6A_NONCONFORMANT`. This tool's output is preserved as
+ * E1-v5's outcome is `STOP_PROTOCOL_POSTFREEZE_CHAIN_NONCONFORMANT`; this tool is one of the
+ * three nonconformant links, preserved under the subordinate code
+ * `STOP_PROTOCOL_STEP6A_NONCONFORMANT`. Its INPUTS were already nonconformant before it ran:
+ * `D_program` violates frozen §3.4 and the manifest replay never established otherwise
+ * (`E1-v5-STOP.md` §3-§4). This tool's output is preserved as
  * a historical observation of one tool in one environment; no `LT-BR-*` it emits is allocated,
  * no candidate index it reports is a frozen index, and no stop it reaches is the frozen
  * procedure's stop. It is NOT REPAIRED here — the defects are recorded so `E1-v6` can freeze

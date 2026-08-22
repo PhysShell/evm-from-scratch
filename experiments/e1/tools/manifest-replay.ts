@@ -154,9 +154,33 @@ function git(args: string[]): { ok: boolean; out: string } {
 /**
  * One row per version that defines a freeze event. `experiment_version` selects the row.
  *
- * The selector is manifest-supplied, and that is safe because every row is strict: a manifest
- * that named the wrong version would be judged against that version's base and path, and its
- * own freeze merge introduces neither. Mis-declaring fails the predicate; it cannot weaken it.
+ * ══════════════════════════════════════════════════════════════════════════════════════════
+ * NONCONFORMANCE WARNING — THE SELECTOR IS SUPPLIED BY THE ARTEFACT BEING CHECKED
+ *
+ * The paragraph that stood here claimed this was safe: "a manifest that named the wrong
+ * version would be judged against that version's base and path, and its own freeze merge
+ * introduces neither. Mis-declaring fails the predicate; it cannot weaken it."
+ *
+ * That holds only for an INCOHERENT mis-declaration. A coherent one passes. A manifest that
+ * moves `experiment_version`, `freeze_base_sha`, `freeze_path` and `freeze_merge_sha` together
+ * to a genuine older freeze is judged against that older version's literals, satisfies (a)-(e)
+ * and the ancestry check, and replays fully green — while its program-domain block still
+ * prints under the newer version's heading. Demonstrated with an E1-v3-declaring manifest
+ * carrying the v5 program-domain block: every line ok, ending "M0 agrees with every primary
+ * source", certifying the v3 freeze.
+ *
+ * The literals below are correctly held outside the manifest. What is NOT held outside it is
+ * the choice of WHICH ROW APPLIES — and that choice decides which literals the manifest is
+ * measured against. This is the same defect class the comment above was written to prevent.
+ *
+ * NOT REPAIRED, per E1-v5's disposition (`STOP_PROTOCOL_POSTFREEZE_CHAIN_NONCONFORMANT`).
+ * E1-v6 must fix the verifier's expected version outside the manifest it checks — the blunt
+ * option being a separate `verify-m0-v6.ts` with a literal `EXPECTED_VERSION`. See
+ * `docs/experiments/E1-v5-STOP.md` §3.1 and §9(g).
+ *
+ * This does NOT unsettle the E1-v5 freeze `f670258`: its topology and the §4.1 predicate are
+ * establishable directly from the commit graph, without trusting any manifest.
+ * ══════════════════════════════════════════════════════════════════════════════════════════
  */
 const FREEZE_LITERALS: Record<string, { base: string; path: string; clause: string }> = {
   'E1-v3': {
