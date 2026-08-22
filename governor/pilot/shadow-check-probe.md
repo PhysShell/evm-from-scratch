@@ -11,4 +11,4 @@ Disposable probe PR for the `ai-final-review` governance program.
 - Control plane: `PhysShell/review-governance`,
   branch `experiment/governor-shadow-check`.
 
-epoch marker: A
+epoch marker: B
