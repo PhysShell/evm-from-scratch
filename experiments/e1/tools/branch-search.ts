@@ -1,17 +1,44 @@
 /**
- * Branch search — frozen Step 2 §8.2.2, run at step 6a under E1-v5.
+ * Branch search — an ATTEMPT at frozen Step 2 §8.2.2, run at step 6a under E1-v5.
  *
  * For each arm the 213 core tests leave uncovered, enumerate candidates from the §8.2.1
  * canonical stream for that unit's input record, up to B = 4096, and take the FIRST that
  * covers the arm.
  *
- * ORDER WARNING. §8.2.2 says "in frozen source order" and §8.2 allocates `LT-BR-*` "in
- * ascending order of source position", but no frozen text defines a total order BETWEEN files.
- * This tool iterates the order its input record supplies — alphabetical by repository-relative
- * path — and that choice is result-bearing: it changes which arm stops the run and which
- * `LT-BR-*` IDs are realised. Whatever this prints is an observation under that order, not the
- * frozen procedure's verdict. E1-v5 stopped on exactly this
- * (`STOP_PROTOCOL_ARM_ORDER_UNDERSPECIFIED`), and a successor must freeze a total order first.
+ * ══════════════════════════════════════════════════════════════════════════════════════════
+ * NONCONFORMANCE WARNING — WHAT THIS TOOL PRINTS IS NOT PROTOCOL EVIDENCE
+ *
+ * E1-v5's outcome is `STOP_PROTOCOL_STEP6A_NONCONFORMANT`. This tool's output is preserved as
+ * a historical observation of one tool in one environment; no `LT-BR-*` it emits is allocated,
+ * no candidate index it reports is a frozen index, and no stop it reaches is the frozen
+ * procedure's stop. It is NOT REPAIRED here — the defects are recorded so `E1-v6` can freeze
+ * against them. See `docs/experiments/E1-v5-STOP.md`.
+ *
+ *   1. ORDER. §8.2.2 says "in frozen source order" and §8.2 allocates `LT-BR-*` "in ascending
+ *      order of source position", but no frozen text defines a total order BETWEEN files. This
+ *      tool iterates the order its input record supplies — alphabetical by repository-relative
+ *      path — and that choice is result-bearing. Preserved as its own finding,
+ *      `STOP_PROTOCOL_ARM_ORDER_UNDERSPECIFIED`.
+ *
+ *   2. `Frame.pc` is omitted from `FRAME_FIELDS` and hard-coded to 0 in `frameFrom`, although
+ *      §8.2.1 assigns `Frame.pc` to `uint256` and §2 fixes a nine-field Frame order. Every
+ *      Frame-based unit therefore enumerates a stream that is not the frozen one.
+ *
+ *   3. `U-HLT` below carries a `halt` field that frozen §1.3 does not declare (its inputs are
+ *      `frame, offset, len`), and `exercise`/`describe` disagree on what that field means.
+ *
+ *   4. `D_BYTES` members are handed to mutable owned state without cloning. `mstore` writes in
+ *      place when the buffer already fits, so a candidate can mutate the shared domain member
+ *      and later candidates depend on earlier execution.
+ *
+ *   5. The instrumentation that fixes arm ordinals — `istanbul-lib-instrument`, `source-map` —
+ *      is transitive and absent from M0-v5's toolchain set, so replay never constrained it.
+ *
+ *   6. A missing `UnitRecord` or a missing instrumentation entry falls through toward
+ *      `unwitnessed` and would print under the §8.2.2 heading, letting a tooling gap
+ *      masquerade as a frozen verdict. Both branches are unreachable in this run. `E1-v6`
+ *      must fail closed.
+ * ══════════════════════════════════════════════════════════════════════════════════════════
  *
  *   covered within B      -> emit LT-BR-<unit>-<nnn>, inputs recorded verbatim
  *   not covered within B  -> NO_FROZEN_BRANCH_WITNESS: stop, preserve the record

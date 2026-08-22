@@ -1,13 +1,13 @@
 {
- "run": "E1-v5 step 6a \u2014 discovery coverage",
- "scope": "the 213 core postcondition tests only (test/core), per Step 0 \u00a73.2.1",
+ "run": "E1-v5 step 6a — discovery coverage",
+ "scope": "the 213 core postcondition tests only (test/core), per Step 0 §3.2.1",
  "excluded": [
   "oracle-a",
   "oracle-b",
   "composition witnesses W1-W6",
   "c2_control_suite"
  ],
- "note": "ordinal is the arm index within its file, in istanbul enumeration order. `arms` lists EVERY arm of each file with its type and TypeScript position, so the branch search can validate its ordinal correspondence per arm \u2014 by mapping its own generated-JS positions back through the source map \u2014 instead of comparing type sequences, which a permutation among same-typed arms would pass.",
+ "note": "ordinal is the arm index within its file, in istanbul enumeration order. `arms` lists EVERY arm of each file with its type and TypeScript position, so the branch search can validate its ordinal correspondence per arm — by mapping its own generated-JS positions back through the source map — instead of comparing type sequences, which a permutation among same-typed arms would pass.",
  "uncovered_count": 45,
  "uncovered": [
   {
@@ -1018,5 +1018,6 @@
    }
   ]
  },
- "file_order_is_not_frozen": "The files below appear alphabetically by repository-relative path, which is what the coverage extractor produced. Frozen Step 2 defines no total order BETWEEN files, and the choice is result-bearing \u2014 it changes which arm stops the branch search and which LT-BR-* IDs are realised. E1-v5 stopped on exactly that (STOP_PROTOCOL_ARM_ORDER_UNDERSPECIFIED). Nothing here should be read as the frozen order."
+ "file_order_is_not_frozen": "The files below appear alphabetically by repository-relative path, which is what the coverage extractor produced. Frozen Step 2 defines no total order BETWEEN files, and the choice is result-bearing — it changes which arm stops the branch search and which LT-BR-* IDs are realised. Preserved as an independent finding, STOP_PROTOCOL_ARM_ORDER_UNDERSPECIFIED. Nothing here should be read as the frozen order.",
+ "non_admissible_protocol_evidence": "E1-v5's outcome is STOP_PROTOCOL_STEP6A_NONCONFORMANT: the step 6a execution is not admissible as an execution of frozen §8.2.1/§8.2.2. This discovery output is preserved as a historical observation of one tool in one environment. The arm ordinals here are the ordinals every reported witness and stop were stated against, and they rest on instrumentation versions M0-v5 never bound (istanbul-lib-instrument, source-map are transitive and absent from its toolchain set). See docs/experiments/E1-v5-STOP.md."
 }
