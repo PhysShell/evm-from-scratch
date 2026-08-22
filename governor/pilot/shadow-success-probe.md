@@ -12,3 +12,5 @@ Disposable probe PR for the `ai-final-review` governance program.
 - Merge: **NEVER**. Closed without merge after captures.
 - Control plane: `PhysShell/review-governance`,
   branch `experiment/shadow-success-lifecycle`.
+
+head change marker
