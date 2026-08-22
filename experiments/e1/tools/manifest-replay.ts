@@ -178,7 +178,16 @@ function git(args: string[]): { ok: boolean; out: string } {
  * option being a separate `verify-m0-v6.ts` with a literal `EXPECTED_VERSION`. See
  * `docs/experiments/E1-v5-STOP.md` §3.1 and §9(g).
  *
- * This does NOT unsettle the E1-v5 freeze `f670258`: its topology and the §4.1 predicate are
+ * SECOND DEFECT, same shape — a MANDATORY OBLIGATION IS SKIPPABLE. The whole binding-rule-5
+ * section below is guarded by `if (m0.program_domain)`, although frozen §4.2 rule 5 says
+ * M0-v5 MUST recompute D_program. A v5 manifest that simply omits the block loses the member
+ * count, the digest and the structural assertion, and this script still exits 0 printing
+ * "M0 agrees with every primary source" — demonstrated, with no warning of any kind. So the
+ * artefact under test controls not only WHICH CRITERIA apply to it but WHETHER A MANDATORY
+ * OBLIGATION EXISTS AT ALL. NOT REPAIRED; E1-v6 §9(g) requires every version-mandatory block
+ * to be demanded fail-closed.
+ *
+ * Neither defect unsettles the E1-v5 freeze `f670258`: its topology and the §4.1 predicate are
  * establishable directly from the commit graph, without trusting any manifest.
  * ══════════════════════════════════════════════════════════════════════════════════════════
  */

@@ -14,9 +14,10 @@ produces `E1-v6`. That remains true — the freeze is valid and was finalised he
 >
 > This record covers the last of those three, preserved under the subordinate code
 > **`STOP_PROTOCOL_STEP6A_NONCONFORMANT`** (§8), which in turn contains the independent
-> specification defect **`STOP_PROTOCOL_ARM_ORDER_UNDERSPECIFIED`** (§7). The two defects
-> *above* this run in the chain — `D_program` violating frozen §3.4, and the replay's
-> self-supplied version selector — are recorded in
+> specification defect **`STOP_PROTOCOL_ARM_ORDER_UNDERSPECIFIED`** (§7). The defects
+> *above* this run in the chain — `D_program` violating frozen §3.4, and the M0/replay binding's
+> self-supplied version selector, skippable mandatory rule-5 block and under-strength structural
+> check — are recorded in
 > [`E1-v5-STOP.md`](../../../docs/experiments/E1-v5-STOP.md) §3–§4. **They mean this run's
 > inputs were already nonconformant before it started.**
 >
@@ -115,11 +116,13 @@ run.ts -> sto.ts`.
 
 ```text
 budget          B = 4096 candidates per arm
-|D_program|     37 members, as built. M0-v5 checked the digest and the sole-trailing-
-                jumpdest property under binding rule 5, but by calling the SAME generator —
-                so that is self-agreement, not conformance to §3.2-§3.7. The generator
-                violates §3.4 (`E1-v5-STOP.md` §4), so these candidates came from a domain
-                that is not the frozen one.
+|D_program|     37 members, as built. M0-v5 checked the digest under binding rule 5, but by
+                calling the SAME generator — self-agreement, not conformance to §3.2-§3.7.
+                The generator violates §3.4 (`E1-v5-STOP.md` §4), so these candidates came
+                from a domain that is not the frozen one. The replay's structural boolean
+                does not establish the member-role distinction it appears to: 35 generated
+                p(j,t) members carry one trailing JUMPDEST; ε and p_trunc are anchorless
+                (`E1-v5-STOP.md` §3.2).
 records         per unit, from the §1.3 declared inputs typed by §2, enumerated in the
                 §8.2.1 index-sum order — EXCEPT where §8 records that they were not
 ```

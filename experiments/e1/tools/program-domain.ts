@@ -25,6 +25,14 @@
  *
  * Binding rule 5's replay does NOT catch this: it recomputes the digest by calling this same
  * generator, so it establishes self-agreement, not conformance to §3.2–§3.7.
+ *
+ * SECOND DEFECT — `soleTrailingJumpdest` is weaker than the invariant it names. It returns
+ * true for ANY member with no jumpdests at all, so `ε` and `p_trunc` — anchorless by
+ * construction — pass through the same branch an ACCIDENTALLY anchorless generated `p(j,t)`
+ * would. Replay therefore reports "sole trailing jumpdest, all 37 members" when only 35 carry
+ * an anchor. The role-specific statement is the true one: ε empty and unanchored; each of the
+ * 35 p(j,t) with exactly one jumpdest as its final byte; p_trunc the truncated PUSH32 member,
+ * unanchored. NOT REPAIRED; E1-v6 §9(f) requires the role-specific verifier.
  * ══════════════════════════════════════════════════════════════════════════════════════════
  *
  * Two prohibitions from §6.1 are structural rather than advisory, and are visible in the

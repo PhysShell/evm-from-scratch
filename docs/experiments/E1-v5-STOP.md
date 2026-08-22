@@ -25,7 +25,9 @@ f670258 freeze
         │
         ├── M0 / replay binding          NONCONFORMANT   §3
         │     ├── version selector is self-supplied
-        │     └── D_program conformance never established
+        │     ├── a mandatory rule-5 block is optional/skippable
+        │     ├── D_program conformance never established
+        │     └── the structural check is weaker than the invariant it claims
         │
         ├── D_program implementation     NONCONFORMANT   §4
         │     └── CALL-family operand typing violates §3.4
@@ -71,9 +73,13 @@ post-freeze tooling; none is in `src/`.
 const literals = FREEZE_LITERALS[m0.experiment_version ?? ''];
 ```
 
-The manifest does not supply `base` or `path` — but it supplies the **selector for the criteria
-set** against which its own `base`, `path` and freeze SHA are then judged. The file's own comment
-argues this is safe because "a manifest that named the wrong version would be judged against that
+Three things must be kept apart here. The **manifest supplies the declaration fields**
+`freeze_base_sha` and `freeze_path`. The **verifier's `FREEZE_LITERALS` table supplies the
+expected literal values** those fields are checked against — correctly held outside the
+manifest. But the **manifest also supplies `experiment_version`, the selector that chooses
+which table row applies** — and therefore which expected literals its own declarations are
+measured against. That last one is the defect. The file's own comment argues it is safe
+because "a manifest that named the wrong version would be judged against that
 version's base and path, and its own freeze merge introduces neither". That holds only for an
 *incoherent* mis-declaration. A coherent one — version, base, path and freeze SHA all moved
 together to a genuine older freeze — passes.
@@ -118,10 +124,56 @@ and **not**
 > *this implementation conforms to frozen §3.2–§3.7*
 
 Rule 5 promised the second. The replay's `|Σ|`, plain-block count, terminal-variant count,
-`|D_program|`, digest and sole-trailing-`JUMPDEST` results remain true **as properties of the
-artefact that was actually built** — an artefact that does not implement §3.4. They are not
-standing evidence that the `D_program` implementation is conformant, and this record no longer
-claims they are.
+`|D_program|` and digest results remain true **as properties of the artefact that was actually
+built** — an artefact that does not implement §3.4. They are not standing evidence that the
+`D_program` implementation is conformant, and this record no longer claims they are.
+
+**The sole-trailing-`JUMPDEST` result is removed from that list**, because it is not merely
+recorded under a loose label — the predicate does not enforce the invariant it names.
+`soleTrailingJumpdest()` returns `true` for any member with *no* jumpdests at all, so the two
+intentionally anchorless members pass through the same branch that an **accidentally** anchorless
+generated program would:
+
+```text
+member     len  jumpdests  lastByte  predicate
+ε            0          0    (none)  true
+p_trunc      1          0      0x7f  true
+
+members WITH a trailing jumpdest anchor : 35 of 37
+members the check calls compliant       : 37
+```
+
+What is true of the artefact actually built is the **role-specific** statement: all **35
+generated `p(j,t)` members** carry exactly one `JUMPDEST` and it is the final byte, while `ε` and
+`p_trunc` are anchorless by construction. The replay's boolean does not establish that
+distinction and must not be presented as doing so.
+
+### 3.3 A mandatory obligation is skippable
+
+The whole of the rule-5 section is guarded:
+
+```ts
+if (m0.program_domain) { … }
+```
+
+Frozen §4.2 rule 5 says `M0-v5` **MUST** recompute `D_program`. Treating the block's presence as
+an optional feature means a v5 manifest that simply omits it loses the member count, the digest
+and the structural assertion — silently. Replayed with the block deleted:
+
+```text
+freeze event f670258f1e7e — E1-v5 §4.1
+ok    (a)…(e) and the ancestry check          all PASS
+      measured target (HEAD) add0a0975eb4
+
+manifest replay: M0 agrees with every primary source
+exit=0
+```
+
+No program-domain section, no warning, exit 0. (Demonstration file deleted, never committed.)
+
+Preserved as **historical verifier evidence**, not repaired. Taken with §3.1 this is the same
+defect twice: the artefact under test controls not only *which criteria* apply to it, but
+*whether a mandatory obligation exists at all*.
 
 ## 4. Reason two — `D_program` does not implement frozen §3.4
 
@@ -296,13 +348,23 @@ successful measured step 6a.
 (e) FAIL-CLOSED treatment of missing records, missing arm mappings and tooling gaps.
 
 (f) OPERAND-ROLE BINDING derived from ONE frozen operand schema that fixes pop-order and type
-    together, rather than a hand-maintained `addressOperand` index — plus a simple independent
+    together, rather than a hand-maintained `addressOperand` index — plus an independent
     structural check of a generated CALL block, so the generator cannot confirm itself.
 
-(g) THE VERIFIER'S VERSION SPECIFIED OUTSIDE THE MANIFEST IT CHECKS. The blunt option is the
-    good one: a separate `verify-m0-v6.ts` holding a literal `EXPECTED_VERSION = 'E1-v6'`. A
-    generic `--expect` is acceptable only if the invocation carrying `--expect E1-v6` is itself
-    part of the frozen protocol.
+    That structural verifier must be ROLE-SPECIFIC, not one disjunctive boolean:
+
+        member 0, ε        MUST be empty and have no jumpdest
+        each p(j,t), 35    MUST have exactly one jumpdest, and it MUST be the final byte
+        p_trunc            MUST be exactly the truncated PUSH32 member, and have no jumpdest
+
+    A single predicate covering all three roles is what lets an accidentally anchorless
+    generated member pass through the branch meant for the two intentionally anchorless ones.
+
+(g) THE VERIFIER'S VERSION SPECIFIED OUTSIDE THE MANIFEST IT CHECKS, **and every
+    version-mandatory manifest block REQUIRED FAIL-CLOSED** — never guarded by artefact-supplied
+    presence. The blunt option is the good one: a separate `verify-m0-v6.ts` holding a literal
+    `EXPECTED_VERSION = 'E1-v6'`. A generic `--expect` is acceptable only if the invocation
+    carrying `--expect E1-v6` is itself part of the frozen protocol.
 ```
 
 Prefer **one canonical record-schema source** from which the generator is constructed, rather
