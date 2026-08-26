@@ -187,8 +187,23 @@ function git(args: string[]): { ok: boolean; out: string } {
  * OBLIGATION EXISTS AT ALL. NOT REPAIRED; E1-v6 §9(g) requires every version-mandatory block
  * to be demanded fail-closed.
  *
- * Neither defect unsettles the E1-v5 freeze `f670258`: its topology and the §4.1 predicate are
- * establishable directly from the commit graph, without trusting any manifest.
+ * THIRD DEFECT, and this one is in the FROZEN TEXT, not only here — THE DIGEST COMMITMENT IS
+ * NOT CANONICALLY SPECIFIED. Frozen §4.2 rule 5 says M0-v5 must "record its member count and
+ * digest" and stops there: no hash algorithm, no canonical member serialization. The line that
+ * computes `d_program_digest` below therefore decides, post-freeze, the algorithm, the
+ * committed field set (including whether a presentational LABEL belongs in a commitment), the
+ * field order, the delimiters, the integer and hex representations, the text encoding, and the
+ * terminal-delimiter policy. Replay then checks the manifest inside that same convention, so
+ * self-agreement cannot show it is the commitment rule 5 froze. The local inconsistency is
+ * evidence of that, not its cause: the plan digests above hash `join('\n') + '\n'`, following
+ * the one serialization this repository does freeze (Step 2 §8.3), while the domain digest
+ * hashes `join('\n')` with no terminator. NOT REPAIRED, and the digest is NOT recomputed;
+ * E1-v6 §9(h) requires the whole commitment format frozen before M0 exists — preferably a
+ * length-prefixed byte encoding rather than a Unicode text concatenation. See
+ * `docs/experiments/E1-v5-STOP.md` §3.4.
+ *
+ * None of the three unsettles the E1-v5 freeze `f670258`: its topology and the §4.1 predicate
+ * are establishable directly from the commit graph, without trusting any manifest.
  * ══════════════════════════════════════════════════════════════════════════════════════════
  */
 const FREEZE_LITERALS: Record<string, { base: string; path: string; clause: string }> = {

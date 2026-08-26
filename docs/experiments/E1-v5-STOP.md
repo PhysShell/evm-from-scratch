@@ -27,7 +27,9 @@ f670258 freeze
         │     ├── version selector is self-supplied
         │     ├── a mandatory rule-5 block is optional/skippable
         │     ├── D_program conformance never established
-        │     └── the structural check is weaker than the invariant it claims
+        │     ├── the structural check is weaker than the invariant it claims
+        │     └── digest algorithm / canonical serialization never frozen;
+        │         the result-bearing encoding was chosen post-freeze
         │
         ├── D_program implementation     NONCONFORMANT   §4
         │     └── CALL-family operand typing violates §3.4
@@ -48,6 +50,10 @@ Two subordinate codes are preserved:
 - **`STOP_PROTOCOL_ARM_ORDER_UNDERSPECIFIED`** — §5.6, an independent *specification* defect:
   the frozen procedure does not determine its own result. It is not a consequence of any
   implementation error and would survive a perfect implementation.
+
+§3.4 is a defect of that same kind — the frozen text, not the tooling, leaves a result-bearing
+choice open — but it takes no code of its own. It is one of the ways the M0/replay binding fails,
+and the top-level outcome already names that layer.
 
 ## 2. What still stands, and why
 
@@ -126,7 +132,10 @@ and **not**
 Rule 5 promised the second. The replay's `|Σ|`, plain-block count, terminal-variant count,
 `|D_program|` and digest results remain true **as properties of the artefact that was actually
 built** — an artefact that does not implement §3.4. They are not standing evidence that the
-`D_program` implementation is conformant, and this record no longer claims they are.
+`D_program` implementation is conformant, and this record no longer claims they are. The digest
+is narrower still: §3.4 below shows the protocol never fixed how a domain is serialised before
+hashing, so that value is a property of the artefact *under an encoding chosen after the freeze*,
+not a commitment any independent implementation could reproduce.
 
 **The sole-trailing-`JUMPDEST` result is removed from that list**, because it is not merely
 recorded under a loose label — the predicate does not enforce the invariant it names.
@@ -174,6 +183,90 @@ No program-domain section, no warning, exit 0. (Demonstration file deleted, neve
 Preserved as **historical verifier evidence**, not repaired. Taken with §3.1 this is the same
 defect twice: the artefact under test controls not only *which criteria* apply to it, but
 *whether a mandatory obligation exists at all*.
+
+### 3.4 The digest commitment is not canonically specified
+
+The three findings above are implementation defects. This one is not: it is an **independent
+frozen-specification defect inside the M0/replay binding layer**, and it would survive a perfect
+implementation. An independent verifier reading only the frozen preregistration cannot derive one
+unique `d_program_digest`, because the frozen text never fixes what is hashed, or how.
+
+Rule 5 is the whole commitment:
+
+> `M0-v5` MUST additionally recompute `D_program` **from §3.2-§3.7** and record its member count
+> and digest…
+
+"and digest" is all of it. No hash algorithm is named — neither `sha256` nor `sha-256` occurs
+anywhere in `E1-v5-preregistration.md` — and no canonical byte serialization of a member is
+given. §3.2–§3.7 fix the *domain*: which members exist, in what order, and what bytes each one
+is. Nothing in them says how a domain becomes the one string of bytes that gets hashed. The
+choices the frozen text leaves open include at least:
+
+```text
+hash algorithm            named nowhere in the frozen documents
+committed field set       index, label and code are all hashed; nothing frozen says a label —
+                          a presentational name — belongs in a commitment at all
+field order               index, then label, then code
+field delimiter           U+0009 TAB
+member delimiter          U+000A LF
+integer representation    decimal, unpadded
+code representation       lowercase hex, unprefixed
+text encoding             the host's string → UTF-8; result-bearing, see below
+terminal delimiter        none after the final member
+```
+
+That list is deliberately not offered as a count. Splitting or merging the field-set decisions
+moves the number, and the number is not the finding: each line is a place where two honest
+implementations of the same frozen rule produce two different digests.
+
+**The post-freeze implementation supplied the missing semantics itself.** Every line of that
+table is decided on one line of `manifest-replay.ts`, written after the freeze:
+
+```ts
+const digest = sha256(domain.map((mem) => `${mem.index}\t${mem.label}\t${hex(mem.code)}`).join('\n'));
+```
+
+Replay then compares the manifest against a digest computed under that same convention. So it
+establishes agreement *within* a convention the protocol never fixed — the §3.1 and §3.2 pattern
+once more, now at the level of the encoding rather than the version or the generator.
+
+**No local convention was inferable either.** The one digest serialization this repository does
+freeze is Step 2 §8.3, for `plan_core_digest`: "SHA-256 over the 213 IDs, sorted ascending as
+ASCII, joined by `\n`, **with a trailing newline**." The verifier follows it for the two plan
+digests and does not follow it for this one:
+
+```ts
+sha256(ids.join('\n') + '\n')                    // line 116  plan_core_digest
+sha256([...ids, …].sort().join('\n') + '\n')     // line 119  c2_control_core_digest
+sha256(domain.map(…).join('\n'))                 // line 265  d_program_digest — no terminator
+```
+
+That divergence is mechanical evidence, not the root cause. It shows that not even this
+repository's own single precedent was carried across, so there was no convention an independent
+implementer could have recovered after the fact. Making the terminator match would leave every
+other line of the table exactly as open as it is now.
+
+**The text encoding is result-bearing, and not only because of `ε`.** Six of the 37 labels carry
+non-ASCII codepoints:
+
+```text
+member  0        ε              U+03B5
+members 31…35    p(⟨jd⟩, t)     U+27E8, U+27E9
+```
+
+Labels are inside the hash, so how those codepoints become bytes changes the digest — while
+nothing frozen says labels are committed in the first place.
+
+**What this narrows.** The recorded value
+
+```text
+d_program_digest   7e5758e74a0ea1a3e92e48945ac011ad22114781c95d40010ed318cd842dc82b
+```
+
+remains a true property of the artefact that was actually built, **under the
+implementation-specific encoding that produced it**. It is not a protocol-defined commitment
+reproducible from frozen §3.2–§3.7 by anyone else, and it may not be cited as one. It is not
+recomputed here, and `M0-v5` is not edited.
 
 ## 4. Reason two — `D_program` does not implement frozen §3.4
 
@@ -365,6 +458,16 @@ successful measured step 6a.
     presence. The blunt option is the good one: a separate `verify-m0-v6.ts` holding a literal
     `EXPECTED_VERSION = 'E1-v6'`. A generic `--expect` is acceptable only if the invocation
     carrying `--expect E1-v6` is itself part of the frozen protocol.
+
+(h) A CANONICAL COMMITMENT FORMAT for every recorded digest, frozen BEFORE `M0` exists: the hash
+    algorithm; the exact committed fields and their order; the byte encoding of each field; the
+    integer representation; the text encoding, if any text is committed at all; the code-byte
+    representation; the record and member delimiters or length prefixes; the member order; and
+    the terminal-delimiter policy. The verifier MUST hash exactly those bytes and nothing else.
+
+    Prefer a byte-level encoding with explicit lengths over an ad-hoc Unicode text concatenation
+    of tabs, newlines and hex. Length prefixes remove delimiter ambiguity outright, and a
+    commitment that carries no presentational labels cannot be destabilised by renaming one.
 ```
 
 Prefer **one canonical record-schema source** from which the generator is constructed, rather

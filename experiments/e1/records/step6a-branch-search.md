@@ -122,7 +122,10 @@ budget          B = 4096 candidates per arm
                 from a domain that is not the frozen one. The replay's structural boolean
                 does not establish the member-role distinction it appears to: 35 generated
                 p(j,t) members carry one trailing JUMPDEST; ε and p_trunc are anchorless
-                (`E1-v5-STOP.md` §3.2).
+                (`E1-v5-STOP.md` §3.2). The digest itself is not a reproducible commitment
+                either: rule 5 froze no hash algorithm and no canonical serialization, so
+                the recorded value holds only under the encoding the verifier chose after
+                the freeze (`E1-v5-STOP.md` §3.4).
 records         per unit, from the §1.3 declared inputs typed by §2, enumerated in the
                 §8.2.1 index-sum order — EXCEPT where §8 records that they were not
 ```
