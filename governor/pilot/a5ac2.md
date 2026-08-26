@@ -4,3 +4,5 @@ Used for the healthy-path webhook latency fixture and the external
 watchdog SLO rerun.
 
 fast path marker
+
+fast path marker 2
