@@ -10,6 +10,7 @@
  * Exit 0 = every recomputed value matches M0. Exit 1 = at least one does not.
  */
 import { createHash } from 'node:crypto';
+import { buildDomain, soleTrailingJumpdest, SIGMA, PLAIN, TERMINALS } from './program-domain';
 import { execFileSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -36,6 +37,15 @@ interface M0 {
   freeze_merge_sha?: string;
   freeze_base_sha?: string;
   freeze_path?: string;
+  experiment_version?: string;
+  /** E1-v5 binding rule 5. `D_program` is a decision-rule input, so it is replayed. */
+  program_domain?: {
+    member_count: number;
+    sigma_size: number;
+    plain_blocks: number;
+    terminal_variants: number;
+    d_program_digest: string;
+  };
 }
 
 // Overridable so E1-v1's stopped manifest stays replayable for audit.
@@ -141,22 +151,93 @@ function git(args: string[]): { ok: boolean; out: string } {
  * satisfy a predicate parameterised by them. The manifest's declarations are checked
  * against these literals; the predicate is evaluated with the literals.
  */
-const FREEZE_BASE_SHA = 'fbef84cd4a925345d3aa65c2e02d9d7502bea787';
-const FREEZE_PATH = 'docs/experiments/E1-v3-preregistration.md';
+/**
+ * One row per version that defines a freeze event. `experiment_version` selects the row.
+ *
+ * ══════════════════════════════════════════════════════════════════════════════════════════
+ * NONCONFORMANCE WARNING — THE SELECTOR IS SUPPLIED BY THE ARTEFACT BEING CHECKED
+ *
+ * The paragraph that stood here claimed this was safe: "a manifest that named the wrong
+ * version would be judged against that version's base and path, and its own freeze merge
+ * introduces neither. Mis-declaring fails the predicate; it cannot weaken it."
+ *
+ * That holds only for an INCOHERENT mis-declaration. A coherent one passes. A manifest that
+ * moves `experiment_version`, `freeze_base_sha`, `freeze_path` and `freeze_merge_sha` together
+ * to a genuine older freeze is judged against that older version's literals, satisfies (a)-(e)
+ * and the ancestry check, and replays fully green — while its program-domain block still
+ * prints under the newer version's heading. Demonstrated with an E1-v3-declaring manifest
+ * carrying the v5 program-domain block: every line ok, ending "M0 agrees with every primary
+ * source", certifying the v3 freeze.
+ *
+ * The literals below are correctly held outside the manifest. What is NOT held outside it is
+ * the choice of WHICH ROW APPLIES — and that choice decides which literals the manifest is
+ * measured against. This is the same defect class the comment above was written to prevent.
+ *
+ * NOT REPAIRED, per E1-v5's disposition (`STOP_PROTOCOL_POSTFREEZE_CHAIN_NONCONFORMANT`).
+ * E1-v6 must fix the verifier's expected version outside the manifest it checks — the blunt
+ * option being a separate `verify-m0-v6.ts` with a literal `EXPECTED_VERSION`. See
+ * `docs/experiments/E1-v5-STOP.md` §3.1 and §9(g).
+ *
+ * SECOND DEFECT, same shape — a MANDATORY OBLIGATION IS SKIPPABLE. The whole binding-rule-5
+ * section below is guarded by `if (m0.program_domain)`, although frozen §4.2 rule 5 says
+ * M0-v5 MUST recompute D_program. A v5 manifest that simply omits the block loses the member
+ * count, the digest and the structural assertion, and this script still exits 0 printing
+ * "M0 agrees with every primary source" — demonstrated, with no warning of any kind. So the
+ * artefact under test controls not only WHICH CRITERIA apply to it but WHETHER A MANDATORY
+ * OBLIGATION EXISTS AT ALL. NOT REPAIRED; E1-v6 §9(g) requires every version-mandatory block
+ * to be demanded fail-closed.
+ *
+ * THIRD DEFECT, and this one is in the FROZEN TEXT, not only here — THE DIGEST COMMITMENT IS
+ * NOT CANONICALLY SPECIFIED. Frozen §4.2 rule 5 says M0-v5 must "record its member count and
+ * digest" and stops there: no hash algorithm, no canonical member serialization. The line that
+ * computes `d_program_digest` below therefore decides, post-freeze, the algorithm, the
+ * committed field set (including whether a presentational LABEL belongs in a commitment), the
+ * field order, the delimiters, the integer and hex representations, the text encoding, and the
+ * terminal-delimiter policy. Replay then checks the manifest inside that same convention, so
+ * self-agreement cannot show it is the commitment rule 5 froze. The local inconsistency is
+ * evidence of that, not its cause: the plan digests above hash `join('\n') + '\n'`, following
+ * the one serialization this repository does freeze (Step 2 §8.3), while the domain digest
+ * hashes `join('\n')` with no terminator. NOT REPAIRED, and the digest is NOT recomputed;
+ * E1-v6 §9(h) requires the whole commitment format frozen before M0 exists — preferably a
+ * length-prefixed byte encoding rather than a Unicode text concatenation. See
+ * `docs/experiments/E1-v5-STOP.md` §3.4.
+ *
+ * None of the three unsettles the E1-v5 freeze `f670258`: its topology and the §4.1 predicate
+ * are establishable directly from the commit graph, without trusting any manifest.
+ * ══════════════════════════════════════════════════════════════════════════════════════════
+ */
+const FREEZE_LITERALS: Record<string, { base: string; path: string; clause: string }> = {
+  'E1-v3': {
+    base: 'fbef84cd4a925345d3aa65c2e02d9d7502bea787',
+    path: 'docs/experiments/E1-v3-preregistration.md',
+    clause: 'E1-v3 §3.1',
+  },
+  'E1-v5': {
+    base: '8f5aaeda667b2fecd7963f53806811b24cc36607',
+    path: 'docs/experiments/E1-v5-preregistration.md',
+    clause: 'E1-v5 §4.1',
+  },
+};
 
 if (m0.freeze_merge_sha) {
   const freeze = m0.freeze_merge_sha;
-  console.log(`\nfreeze event ${freeze.slice(0, 12)} — E1-v3 §3.1`);
+  const literals = FREEZE_LITERALS[m0.experiment_version ?? ''];
+  if (literals === undefined) {
+    failures.push(`no frozen freeze literals for experiment_version ${m0.experiment_version}`);
+    console.log(`\nfreeze event: UNKNOWN VERSION ${m0.experiment_version}`);
+    process.exit(1);
+  }
+  console.log(`\nfreeze event ${freeze.slice(0, 12)} — ${literals.clause}`);
 
   // What the manifest DECLARES must equal the frozen literals...
-  check('manifest freeze_base_sha matches the frozen literal', m0.freeze_base_sha, FREEZE_BASE_SHA);
+  check('manifest freeze_base_sha matches the frozen literal', m0.freeze_base_sha, literals.base);
   if (m0.freeze_path !== undefined) {
-    check('manifest freeze_path matches the frozen literal', m0.freeze_path, FREEZE_PATH);
+    check('manifest freeze_path matches the frozen literal', m0.freeze_path, literals.path);
   }
 
   // ...and the predicate is evaluated with the literals, never with those declarations.
-  const base = FREEZE_BASE_SHA;
-  const path = FREEZE_PATH;
+  const base = literals.base;
+  const path = literals.path;
 
   // (a) exactly two parents
   const parents = git(['rev-list', '--parents', '-n1', freeze]);
@@ -184,6 +265,32 @@ if (m0.freeze_merge_sha) {
   check('freeze ordering: HEAD is a descendant of the freeze', git(['merge-base', '--is-ancestor', freeze, target]).ok, true);
 } else {
   console.log('\nfreeze event: not declared by this manifest (M0 / M0-v2 predate E1-v3 §3)');
+}
+
+// 6. `D_program` replay — E1-v5 binding rule 5.
+//
+//    The candidate domain is a decision-rule input exactly as the digests are, so it is
+//    recomputed from the frozen §3.2-§3.7 specification rather than trusted. The
+//    sole-trailing-jumpdest assertion is §3.9's proof made checkable: it is what bounds each
+//    frame at |Σ| + 1 dispatches and makes every jump forward.
+if (m0.program_domain) {
+  console.log('\nprogram domain — E1-v5 §3.7, binding rule 5');
+  const domain = buildDomain();
+  const hex = (u: Uint8Array): string => Buffer.from(u).toString('hex');
+  const digest = sha256(domain.map((mem) => `${mem.index}\t${mem.label}\t${hex(mem.code)}`).join('\n'));
+
+  check('|Σ| from Step 0 §1.1 + §1.2', SIGMA.length, m0.program_domain.sigma_size);
+  check('plain blocks per program', PLAIN.length, m0.program_domain.plain_blocks);
+  check('terminal variants', TERMINALS.length, m0.program_domain.terminal_variants);
+  check('|D_program|', domain.length, m0.program_domain.member_count);
+  check('d_program_digest', digest, m0.program_domain.d_program_digest);
+
+  const violations = domain.filter((mem) => !soleTrailingJumpdest(mem.code));
+  check(
+    `§3.9 sole trailing jumpdest, all ${domain.length} members`,
+    violations.map((mem) => mem.label),
+    [],
+  );
 }
 
 console.log(
