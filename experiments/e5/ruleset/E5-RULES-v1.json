@@ -1,0 +1,168 @@
+{
+  "ruleset_id": "E5-RULES/v1",
+  "$comment": "Transcription of E5 preregistration §6.1, §7.2, §7.4. The document at blob b4f78b572a3de5cdd446524e32f9ec85a264ea5c is the authority. Any change to any rule, constraint, precondition or conclusion produces E5-RULES/v2 and does not edit v1 (§7.1).",
+
+  "constants": {
+    "BOUNDARY_CARRIED_FIELDS": ["address", "caller", "static", "storage_owner", "returndata", "success"],
+    "RECOGNISED_SCOPE": ["FRAME_CONSTRUCTION"]
+  },
+
+  "propositions": {
+    "$comment": "§6.1, closed set. V4 reads these to decide UNKNOWN_CONCLUSION_SHAPE.",
+    "SEAM_FIELD_BOUND_AS": {
+      "id": "P1",
+      "fields": ["source_revision", "site", "field", "binding"]
+    },
+    "SEAM_FIELD_NOT_BOUND": {
+      "id": "P2",
+      "fields": ["source_revision", "spec_revision", "site", "field"]
+    },
+    "SEAM_FIELD_MISBOUND": {
+      "id": "P3",
+      "fields": ["source_revision", "spec_revision", "site", "field", "required", "actual"]
+    },
+    "BOUNDARY_DEFECT_PRESENT": {
+      "id": "P4",
+      "fields": ["source_revision", "spec_revision", "site", "field", "kind"],
+      "kind_values": ["ABSENCE", "MISBINDING"]
+    }
+  },
+
+  "rules": [
+    {
+      "rule_id": "R1",
+      "name": "SITE_BINDING",
+      "arity": 2,
+      "slots": [
+        { "index": 1, "source": "fact", "kind": "SEAM_SITE",
+          "binds": { "r": "source_revision", "s": "site" } },
+        { "index": 2, "source": "fact", "kind": "CONSTRUCTION_WRITE",
+          "binds": { "r2": "source_revision", "s2": "site", "f": "field", "b": "bound_to" } }
+      ],
+      "identity": [
+        { "equal": ["r", "r2"] },
+        { "equal": ["s", "s2"] }
+      ],
+      "preconditions": [
+        { "fully_modelled": "b" }
+      ],
+      "derives": {
+        "shape": "SEAM_FIELD_BOUND_AS",
+        "bind": { "source_revision": "r", "site": "s", "field": "f", "binding": "b" }
+      }
+    },
+    {
+      "rule_id": "R2",
+      "name": "ABSENCE_UNDER_COMPLETENESS",
+      "$comment": "The ONLY negative-conclusion rule (§3.2, §5.3, §7.3). Its negation `f not in F` is taken over F, the explicit closed domain carried inside a fact that is PRESENT — never over the bundle. The field f is supplied by slot 3, a fact, never by the producer.",
+      "arity": 3,
+      "slots": [
+        { "index": 1, "source": "fact", "kind": "SEAM_SITE",
+          "binds": { "r": "source_revision", "s": "site" } },
+        { "index": 2, "source": "fact", "kind": "CONSTRUCTION_WRITES_COMPLETE",
+          "binds": { "r2": "source_revision", "s2": "site", "sc": "scope", "F": "recorded_fields" } },
+        { "index": 3, "source": "fact", "kind": "SPEC_REQUIRED_BINDING",
+          "binds": { "v": "spec_revision", "s3": "site", "f": "field", "b_req": "required" } }
+      ],
+      "identity": [
+        { "equal": ["r", "r2"] },
+        { "equal": ["s", "s2"] },
+        { "equal": ["s2", "s3"] }
+      ],
+      "preconditions": [
+        { "member_of_constant": { "value": "sc", "constant": "RECOGNISED_SCOPE" } },
+        { "not_member_of": { "value": "f", "collection": "F" } }
+      ],
+      "derives": {
+        "shape": "SEAM_FIELD_NOT_BOUND",
+        "bind": { "source_revision": "r", "spec_revision": "v", "site": "s", "field": "f" }
+      }
+    },
+    {
+      "rule_id": "R3",
+      "name": "MISBINDING",
+      "arity": 2,
+      "slots": [
+        { "index": 1, "source": "step", "kind": "SEAM_FIELD_BOUND_AS",
+          "binds": { "r": "source_revision", "s": "site", "f": "field", "b_act": "binding" } },
+        { "index": 2, "source": "fact", "kind": "SPEC_REQUIRED_BINDING",
+          "binds": { "v": "spec_revision", "s2": "site", "f2": "field", "b_req": "required" } }
+      ],
+      "identity": [
+        { "equal": ["s", "s2"] },
+        { "equal": ["f", "f2"] }
+      ],
+      "preconditions": [
+        { "fully_modelled": "b_act" },
+        { "fully_modelled": "b_req" },
+        { "structurally_distinct": ["b_act", "b_req"] }
+      ],
+      "derives": {
+        "shape": "SEAM_FIELD_MISBOUND",
+        "bind": { "source_revision": "r", "spec_revision": "v", "site": "s", "field": "f",
+                  "required": "b_req", "actual": "b_act" }
+      }
+    },
+    {
+      "rule_id": "R4",
+      "name": "DEFECT_FROM_MISBINDING",
+      "$comment": "Not a relabelling. Its precondition is E1 Step 0 §1.2's own definition of a BOUNDARY defect, and it is what stops E5 manufacturing a boundary-defect claim about pc or code.",
+      "arity": 1,
+      "slots": [
+        { "index": 1, "source": "step", "kind": "SEAM_FIELD_MISBOUND",
+          "binds": { "r": "source_revision", "v": "spec_revision", "s": "site", "f": "field",
+                     "b_req": "required", "b_act": "actual" } }
+      ],
+      "identity": [],
+      "preconditions": [
+        { "member_of_constant": { "value": "f", "constant": "BOUNDARY_CARRIED_FIELDS" } }
+      ],
+      "derives": {
+        "shape": "BOUNDARY_DEFECT_PRESENT",
+        "bind": { "source_revision": "r", "spec_revision": "v", "site": "s", "field": "f" },
+        "literal": { "kind": "MISBINDING" }
+      }
+    },
+    {
+      "rule_id": "R5",
+      "name": "DEFECT_FROM_ABSENCE",
+      "$comment": "b_req != d is doing real work: an omitted write whose silent default happens to equal what the specification requires is not a defect, and E5 must not certify it as one.",
+      "arity": 3,
+      "slots": [
+        { "index": 1, "source": "step", "kind": "SEAM_FIELD_NOT_BOUND",
+          "binds": { "r": "source_revision", "v": "spec_revision", "s": "site", "f": "field" } },
+        { "index": 2, "source": "fact", "kind": "FRAME_FIELD_DEFAULT",
+          "binds": { "r2": "source_revision", "f2": "field", "d": "default" } },
+        { "index": 3, "source": "fact", "kind": "SPEC_REQUIRED_BINDING",
+          "binds": { "v2": "spec_revision", "s2": "site", "f3": "field", "b_req": "required" } }
+      ],
+      "identity": [
+        { "equal": ["r", "r2"] },
+        { "equal": ["v", "v2"] },
+        { "equal": ["s", "s2"] },
+        { "equal": ["f", "f2"] },
+        { "equal": ["f2", "f3"] }
+      ],
+      "preconditions": [
+        { "member_of_constant": { "value": "f", "constant": "BOUNDARY_CARRIED_FIELDS" } },
+        { "fully_modelled": "d" },
+        { "fully_modelled": "b_req" },
+        { "structurally_distinct": ["b_req", "d"] }
+      ],
+      "derives": {
+        "shape": "BOUNDARY_DEFECT_PRESENT",
+        "bind": { "source_revision": "r", "spec_revision": "v", "site": "s", "field": "f" },
+        "literal": { "kind": "ABSENCE" }
+      }
+    }
+  ],
+
+  "reason_codes": [
+    "MALFORMED_CERTIFICATE", "UNKNOWN_SCHEMA_VERSION", "UNKNOWN_RULESET",
+    "UNKNOWN_CONCLUSION_SHAPE", "MALFORMED_BUNDLE", "BUNDLE_DIGEST_MISMATCH",
+    "EMPTY_DERIVATION", "UNKNOWN_RULE", "PREMISE_ARITY_MISMATCH",
+    "PREMISE_NOT_FOUND", "PREMISE_FORWARD_REFERENCE", "FACT_ID_NOT_CONTENT_DERIVED",
+    "REVISION_MISMATCH", "PREMISE_KIND_MISMATCH", "PREMISE_IDENTITY_MISMATCH",
+    "RULE_PRECONDITION_UNSATISFIED", "STEP_PROPOSITION_MISMATCH", "CONCLUSION_MISMATCH"
+  ]
+}

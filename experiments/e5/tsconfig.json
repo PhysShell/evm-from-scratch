@@ -1,0 +1,30 @@
+{
+  "$comment": [
+    "E5 is compiled in isolation from E1. There is NO path mapping, project",
+    "reference, or include that reaches experiments/e1 (§6.4). Independence",
+    "check S1 (§11.2) verifies the verifier's transitive module closure contains",
+    "no path under experiments/e1, the producer tree, or the extractor tree;",
+    "this config is what makes an accidental violation hard rather than merely",
+    "detectable after the fact.",
+    "",
+    "rootDir is pinned to this directory so no file outside experiments/e5 can",
+    "enter the program."
+  ],
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "ES2022",
+    "moduleResolution": "bundler",
+    "rootDir": ".",
+    "strict": true,
+    "exactOptionalPropertyTypes": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "noEmit": true,
+    "skipLibCheck": true,
+    "types": [],
+    "paths": {}
+  },
+  "include": ["contract/**/*.ts"],
+  "exclude": ["node_modules"]
+}

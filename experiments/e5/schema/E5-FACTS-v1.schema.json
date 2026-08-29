@@ -1,0 +1,202 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "E5-FACTS/v1",
+  "title": "E5 canonical fact bundle",
+  "$comment": "Transcription of E5 preregistration §5.2, §5.3, §5.5. The document at blob b4f78b572a3de5cdd446524e32f9ec85a264ea5c is the authority; this file is a mechanical restatement and may not add, remove or widen anything.",
+
+  "type": "object",
+  "propertyNames": { "$ref": "#/$defs/FactId" },
+  "additionalProperties": { "$ref": "#/$defs/Fact" },
+
+  "$defs": {
+    "FactId": {
+      "$comment": "§5.5 fact_id = sha256(JCS(fact without its fact_id field)). This schema checks the SHAPE only. Whether the id equals the hash is verifier check V9c -> FACT_ID_NOT_CONTENT_DERIVED, and is deliberately not asserted here.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+
+    "Sha256Hex": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+    "GitObjectSha": {
+      "$comment": "A git object name (SHA-1, 40 hex). Covers both COMMIT shas (source_revision, §5.1) and BLOB shas (spec_revision, §5.1 = 586bb92f66d9c6c889a9c2266832264d526a87b4). Distinct from Sha256Hex, which is only for E5-computed digests: fact_id and fact_bundle_digest (§5.5).",
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+
+    "SiteId": {
+      "$comment": "§5.1 — the three U-CALL construction sites, and only those.",
+      "enum": ["U-CALL/CALL", "U-CALL/STATICCALL", "U-CALL/DELEGATECALL"]
+    },
+
+    "FrameField": {
+      "$comment": "§5.2, in Step 2 §2 field order.",
+      "enum": ["code", "pc", "stack", "memory", "address", "caller", "static", "storage_owner", "returndata"]
+    },
+
+    "Scope": {
+      "$comment": "§5.3 calls scope 'a closed set' without enumerating it, and requires that a non-recognised value be WELL-FORMED so that adversarial case A13c fails at the R2 precondition (RULE_PRECONDITION_UNSATISFIED) rather than at parse time. This enumeration is therefore the minimal closed set the frozen matrix forces: FRAME_CONSTRUCTION is the only member of RECOGNISED_SCOPE, ROOT_FRAME_CONSTRUCTION exists solely so A13c is constructible. See experiments/e5/README.md, transcription decision T2.",
+      "enum": ["FRAME_CONSTRUCTION", "ROOT_FRAME_CONSTRUCTION"]
+    },
+
+    "BindingExpr": {
+      "$comment": "§5.2, closed algebra. UNMODELLED is mandatory honesty, never a fallback.",
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": { "node": { "const": "CALLEE_ADDRESS" } },
+          "required": ["node"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "node": { "const": "CURRENT_FRAME" },
+            "field": { "$ref": "#/$defs/FrameField" }
+          },
+          "required": ["node", "field"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "node": { "const": "CODE_AT" },
+            "of": { "$ref": "#/$defs/BindingExpr" }
+          },
+          "required": ["node", "of"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "node": { "const": "LITERAL_BOOL" },
+            "value": { "type": "boolean" }
+          },
+          "required": ["node", "value"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": { "node": { "const": "ZERO" } },
+          "required": ["node"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": { "node": { "const": "EMPTY" } },
+          "required": ["node"],
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "node": { "const": "UNMODELLED" },
+            "token": { "type": "string" }
+          },
+          "required": ["node", "token"],
+          "additionalProperties": false
+        }
+      ]
+    },
+
+    "Span": {
+      "$comment": "Provenance only. §5.1 forbids any rule, premise constraint or conclusion from reading source_file or span; nothing in the ruleset or the ladder touches this. Shape chosen by the implementer, carries no protocol weight. See README transcription decision T3.",
+      "type": "object",
+      "properties": {
+        "start_line": { "type": "integer", "minimum": 1 },
+        "start_column": { "type": "integer", "minimum": 1 },
+        "end_line": { "type": "integer", "minimum": 1 },
+        "end_column": { "type": "integer", "minimum": 1 }
+      },
+      "required": ["start_line", "start_column", "end_line", "end_column"],
+      "additionalProperties": false
+    },
+
+    "Fact": {
+      "oneOf": [
+        { "$ref": "#/$defs/SpecRequiredBinding" },
+        { "$ref": "#/$defs/SeamSite" },
+        { "$ref": "#/$defs/ConstructionWrite" },
+        { "$ref": "#/$defs/ConstructionWritesComplete" },
+        { "$ref": "#/$defs/FrameFieldDefault" }
+      ]
+    },
+
+    "SpecRequiredBinding": {
+      "$comment": "§5.3 — spec namespace, subject (site, field).",
+      "type": "object",
+      "properties": {
+        "fact_id": { "$ref": "#/$defs/FactId" },
+        "kind": { "const": "SPEC_REQUIRED_BINDING" },
+        "spec_revision": { "$ref": "#/$defs/GitObjectSha" },
+        "site": { "$ref": "#/$defs/SiteId" },
+        "field": { "$ref": "#/$defs/FrameField" },
+        "postcondition_id": { "type": "string" },
+        "required": { "$ref": "#/$defs/BindingExpr" }
+      },
+      "required": ["fact_id", "kind", "spec_revision", "site", "field", "postcondition_id", "required"],
+      "additionalProperties": false
+    },
+
+    "SeamSite": {
+      "$comment": "§5.3 — source namespace, subject site.",
+      "type": "object",
+      "properties": {
+        "fact_id": { "$ref": "#/$defs/FactId" },
+        "kind": { "const": "SEAM_SITE" },
+        "source_revision": { "$ref": "#/$defs/GitObjectSha" },
+        "site": { "$ref": "#/$defs/SiteId" },
+        "source_file": { "type": "string" },
+        "span": { "$ref": "#/$defs/Span" }
+      },
+      "required": ["fact_id", "kind", "source_revision", "site", "source_file", "span"],
+      "additionalProperties": false
+    },
+
+    "ConstructionWrite": {
+      "$comment": "§5.3 — source namespace, subject (site, field).",
+      "type": "object",
+      "properties": {
+        "fact_id": { "$ref": "#/$defs/FactId" },
+        "kind": { "const": "CONSTRUCTION_WRITE" },
+        "source_revision": { "$ref": "#/$defs/GitObjectSha" },
+        "site": { "$ref": "#/$defs/SiteId" },
+        "field": { "$ref": "#/$defs/FrameField" },
+        "bound_to": { "$ref": "#/$defs/BindingExpr" }
+      },
+      "required": ["fact_id", "kind", "source_revision", "site", "field", "bound_to"],
+      "additionalProperties": false
+    },
+
+    "ConstructionWritesComplete": {
+      "$comment": "§5.3 — source namespace, subject site. The completeness witness of §3.2: recorded_fields is the explicit closed domain over which R2's negation is taken. §5.6 forbids emitting this for a site the extractor did not enumerate exhaustively.",
+      "type": "object",
+      "properties": {
+        "fact_id": { "$ref": "#/$defs/FactId" },
+        "kind": { "const": "CONSTRUCTION_WRITES_COMPLETE" },
+        "source_revision": { "$ref": "#/$defs/GitObjectSha" },
+        "site": { "$ref": "#/$defs/SiteId" },
+        "scope": { "$ref": "#/$defs/Scope" },
+        "recorded_fields": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/FrameField" },
+          "uniqueItems": true
+        }
+      },
+      "required": ["fact_id", "kind", "source_revision", "site", "scope", "recorded_fields"],
+      "additionalProperties": false
+    },
+
+    "FrameFieldDefault": {
+      "$comment": "§5.3 — source namespace, subject field. Note: no site.",
+      "type": "object",
+      "properties": {
+        "fact_id": { "$ref": "#/$defs/FactId" },
+        "kind": { "const": "FRAME_FIELD_DEFAULT" },
+        "source_revision": { "$ref": "#/$defs/GitObjectSha" },
+        "field": { "$ref": "#/$defs/FrameField" },
+        "default": { "$ref": "#/$defs/BindingExpr" }
+      },
+      "required": ["fact_id", "kind", "source_revision", "field", "default"],
+      "additionalProperties": false
+    }
+  }
+}

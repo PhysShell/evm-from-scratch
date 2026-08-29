@@ -1,0 +1,267 @@
+{
+  "manifest": "E5-M0",
+  "$comment": [
+    "E5 protocol manifest. Written AFTER the freeze merge M and BEFORE any extractor",
+    "or verifier run (E5 preregistration \u00a714.3). Contains exactly the obligations",
+    "\u00a714.3 enumerates and nothing else.",
+    "",
+    "Every value here is an AUDIT value: it must equal the value recomputed from the",
+    "repository, and it is never the thing that selects anything. A recorded value",
+    "disagreeing with the computation is INVALID_EXPERIMENT (\u00a712.2 G0), not a",
+    "tie-break (\u00a714.2).",
+    "",
+    "All values below were recomputed from the merged tree named in computed_from.",
+    "None were carried over from an earlier branch head."
+  ],
+  "computed_from": {
+    "tree": "cbc95a713c53122ad5ca1fdd783ee385d298d5ea",
+    "$comment": "main at the time this manifest was prepared; every digest and blob sha below was read from this tree, not from a working directory."
+  },
+  "design_cutoff": {
+    "E5_DESIGN_CUTOFF_SHA": "8f5aaeda667b2fecd7963f53806811b24cc36607",
+    "$comment": "\u00a71.1. What was knowable to the preregistration's author. An epistemic fact. NEVER changes \u2014 changing it would claim E5 was designed with information it did not have. DISTINCT from freeze_base_sha below; equating them is the defect recorded as topology log entry 1."
+  },
+  "freeze_anchor": {
+    "freeze_base_sha": "f670258f1e7ef4cf6adbeddeac5a81f4cf981487",
+    "$comment": "\u00a714.2. Which state of the default branch the freeze is anchored to, topologically. A git fact, changed only by the recorded successor procedure.",
+    "topology_amendment_log": [
+      {
+        "entry": 1,
+        "freeze_base_sha": "8f5aaeda667b2fecd7963f53806811b24cc36607",
+        "status": "superseded",
+        "reason": "initial value, equated with E5_DESIGN_CUTOFF_SHA. Superseded: the E1-v5 PR merged first, landing f670258f on main as an ordinary merge with first parent 8f5aaed. Clause (b) became unsatisfiable for any future merge."
+      },
+      {
+        "entry": 2,
+        "freeze_base_sha": "f670258f1e7ef4cf6adbeddeac5a81f4cf981487",
+        "status": "current",
+        "reason": "the tip of main after that merge."
+      }
+    ],
+    "M": "bf6506daceca0c152b234993bc63d1f7b9a5a5ae",
+    "M_evidence": {
+      "$comment": "\u00a714.2 (a)-(f), recomputed by scanning every commit reachable from computed_from.tree. 89 commits scanned; exactly one candidate.",
+      "a_parent_count": 2,
+      "b_first_parent": "f670258f1e7ef4cf6adbeddeac5a81f4cf981487",
+      "b_equals_freeze_base_sha": true,
+      "c_doc_absent_at_first_parent": true,
+      "d_second_parent": "9e02e532f44f2c2b1c057c97c030d09cb92fea7b",
+      "d_doc_present_at_second_parent": true,
+      "e_blob_at_M": "b4f78b572a3de5cdd446524e32f9ec85a264ea5c",
+      "e_blob_at_second_parent": "b4f78b572a3de5cdd446524e32f9ec85a264ea5c",
+      "e_equal": true,
+      "f_commits_scanned": 89,
+      "f_candidates_satisfying_a_to_e": 1,
+      "f_unique": true
+    },
+    "E5_DOC_BLOB_SHA": "b4f78b572a3de5cdd446524e32f9ec85a264ea5c",
+    "$comment_doc_blob": "\u00a714.2 clause (e). Recomputable from M as blob(M:docs/experiments/E5-finding-certificates-preregistration.md).",
+    "E5_FROZEN_clause_3": {
+      "commits_modifying_doc_between_M_and_computed_tree": 0,
+      "holds": true
+    }
+  },
+  "spec_revisions": {
+    "$comment": "\u00a75.1, \u00a71.2. Git object names (SHA-1, 40 hex) \u2014 blob shas, not SHA-256 digests.",
+    "spec_revision": {
+      "path": "docs/experiments/E1-step2-semantics-and-plan.md",
+      "blob_sha": "586bb92f66d9c6c889a9c2266832264d526a87b4",
+      "role": "the spec_revision every SPEC_REQUIRED_BINDING fact carries (\u00a75.1, \u00a75.4)"
+    },
+    "e1_step0_blob_sha": {
+      "path": "docs/experiments/E1-step0-preregistration.md",
+      "blob_sha": "c294d724ce50952db4642f9ef757a3f7a6bf33b6"
+    }
+  },
+  "artifact_digest_method": {
+    "method": "SHA-256 over exact file bytes",
+    "$comment": "Deliberately NOT JCS. \u00a75.5's JCS+SHA-256 governs fact_id and fact_bundle_digest, values whose purpose is stability under re-serialization. An ARTIFACT digest wants the opposite property: reformatting an artifact must invalidate its digest rather than silently preserving identity. Recorded explicitly so no later reader 'canonicalizes' these files and arrives at a different identity for the same object."
+  },
+  "artifacts": {
+    "ruleset": {
+      "ruleset_id": "E5-RULES/v1",
+      "path": "experiments/e5/ruleset/E5-RULES-v1.json",
+      "sha256": "05ab7f08e69ed129560352a9434e599cb208e526631ba48870b90e057506f3ff",
+      "git_blob_sha": "d66b3601a87a53d6938a155c871848de216311f6"
+    },
+    "schema_facts": {
+      "schema_id": "E5-FACTS/v1",
+      "path": "experiments/e5/schema/E5-FACTS-v1.schema.json",
+      "sha256": "17bff613501a0ffc55480e5b0ade9700f4b16ede7d3c9f884bcfb0ec55b1f3e7",
+      "git_blob_sha": "a15989ff89a0c185ae7effe1e19bd18636c7d803"
+    },
+    "schema_certificate": {
+      "schema_id": "E5-CERT/v1",
+      "path": "experiments/e5/schema/E5-CERT-v1.schema.json",
+      "sha256": "576a82d917daa835864a9273329ecc2a1ef88d532a006b65cacceaae5c67d269",
+      "git_blob_sha": "72eff8901c5a407d0357faab9916167c2be5fdaa"
+    }
+  },
+  "capability_boundary": {
+    "$comment": "\u00a79.3, by reference and digest. Declarations only \u2014 no bodies exist. M0 therefore pins the CONTRACT, not the code, so writing the bodies later does not invalidate this manifest.",
+    "fact_resolver_declaration": {
+      "path": "experiments/e5/contract/fact-resolver.ts",
+      "sha256": "afb5643628e2a94199c6b4115cf0a7abf6b1bd7fe6082d3b349e6ff9b290bed7",
+      "git_blob_sha": "340be8ebcc72c1d1cc6edd1ac75e80fa40ec7452",
+      "declares": "interface FactResolver { Resolve(id: FactId): Fact | NotFound }",
+      "K3": "exactly one operation; no iterator, length, count, key set, collection-valued member, or operation returning more than one Fact"
+    },
+    "bundle_loader_exported_signature": {
+      "path": "experiments/e5/contract/bundle-loader.ts",
+      "sha256": "9b6b707643b2202eebbb398b7c5494cacad15e9969cefbd2806dafbcf83d3816",
+      "git_blob_sha": "fb8aa9cd35f99be620222644af468a52da47481a",
+      "signature": "export declare function load(bytes: Uint8Array): { resolver: FactResolver; digest: string }",
+      "K5": "exactly one exported symbol"
+    }
+  },
+  "canonicalization_and_digest": {
+    "canonicalization": "RFC 8785 JSON Canonicalization Scheme (JCS)",
+    "digest": "SHA-256, lowercase hex",
+    "applies_to": [
+      "fact_id (\u00a75.5)",
+      "fact_bundle_digest (\u00a75.5)"
+    ],
+    "$comment": "\u00a75.5. Distinct from artifact_digest_method above; see that entry."
+  },
+  "s2_deny_list": {
+    "$comment": "\u00a711.2 S2. Five frozen categories, and no sixth. Each entry records the frozen category text verbatim plus its TypeScript/Node realisation. The categories are denied in the VERIFIER's transitive closure (shell and kernel); they do not constrain the producer or the extractor, which are outside the independence surface.",
+    "authoring_rule": "This manifest records the frozen categories and their language realisation. It does NOT redefine, narrow or widen any category. Deciding mechanically whether a given occurrence falls inside a category belongs to the S2 check implementation, not to manifest authoring.",
+    "categories": [
+      {
+        "id": "i",
+        "category": "network access of any kind",
+        "typescript_realization": [
+          "fetch",
+          "XMLHttpRequest",
+          "WebSocket",
+          "EventSource",
+          "navigator.sendBeacon",
+          "node:http",
+          "node:https",
+          "node:http2",
+          "node:net",
+          "node:dgram",
+          "node:tls"
+        ]
+      },
+      {
+        "id": "ii",
+        "category": "process creation or shell invocation",
+        "typescript_realization": [
+          "node:child_process",
+          "exec",
+          "execSync",
+          "execFile",
+          "execFileSync",
+          "spawn",
+          "spawnSync",
+          "fork",
+          "node:cluster",
+          "node:worker_threads"
+        ]
+      },
+      {
+        "id": "iii",
+        "category": "dynamic code evaluation, or code loading not resolvable statically",
+        "typescript_realization": [
+          "eval",
+          "new Function",
+          "the Function constructor",
+          "node:vm",
+          "import() with a non-literal specifier",
+          "require() with a non-literal specifier",
+          "WebAssembly.compile",
+          "WebAssembly.instantiate"
+        ]
+      },
+      {
+        "id": "iv",
+        "category": "filesystem WRITE of any kind",
+        "typescript_realization": [
+          "fs.writeFile",
+          "fs.writeFileSync",
+          "fs.appendFile",
+          "fs.appendFileSync",
+          "fs.createWriteStream",
+          "fs.mkdir",
+          "fs.mkdirSync",
+          "fs.rm",
+          "fs.rmSync",
+          "fs.unlink",
+          "fs.unlinkSync",
+          "fs.rename",
+          "fs.renameSync",
+          "fs.copyFile",
+          "fs.truncate",
+          "fs.chmod",
+          "fs.chown",
+          "fs.open with a write flag",
+          "the node:fs/promises equivalents of the above"
+        ],
+        "applicability": [
+          "The frozen category names WRITE. Reads are outside it \u2014 \u00a711.1's clean-room run hands the verifier files to read. This restates the frozen scope and does not narrow it."
+        ]
+      },
+      {
+        "id": "v",
+        "category": "reflection, dynamic member access, or serialization round-trip used to reach past a declared interface",
+        "typescript_realization": [
+          "Reflect.*",
+          "Proxy",
+          "Object.getOwnPropertyNames",
+          "Object.getOwnPropertySymbols",
+          "Object.keys / Object.values / Object.entries",
+          "computed member access",
+          "structuredClone",
+          "a JSON.parse(JSON.stringify(x)) round-trip"
+        ],
+        "applicability": [
+          "The frozen semantic predicate above applies unchanged: the category is these constructs USED TO REACH PAST A DECLARED INTERFACE.",
+          "Ordinary traversal of raw parsed data is not prohibited merely because the same language construct is used. The loader must parse a plain JSON object at V5; that is not reaching past an interface.",
+          "NO narrowing by the expression's current static type is introduced here. Aliasing, casts or type laundering do not move an operation outside category (v) when it is used to reach past a declared interface \u2014 `const x: any = resolver; Reflect.get(x, ...)` is inside the category, and a static-type predicate would wrongly exempt it.",
+          "The flow/type analysis that mechanically decides 'used to reach past' belongs to the S2 check implementation, not to this manifest."
+        ],
+        "cf": "\u00a79.3 K4"
+      }
+    ]
+  },
+  "frozen_surfaces_by_reference": {
+    "$comment": "\u00a714.3 requires these by reference to the preregistration's sections and its blob sha, not by transcription. The authority is the document at E5_DOC_BLOB_SHA.",
+    "document": "docs/experiments/E5-finding-certificates-preregistration.md",
+    "blob_sha": "b4f78b572a3de5cdd446524e32f9ec85a264ea5c",
+    "surfaces": {
+      "specimen_eligibility": "\u00a74.2, \u00a74.3",
+      "fact_model_bindingexpr_identity_digest": "\u00a75",
+      "completeness_semantics": "\u00a73, \u00a75.3, \u00a77.2 R2",
+      "conclusion_shapes": "\u00a76.1",
+      "certificate_schema_and_identity_binding": "\u00a76.2, \u00a76.3",
+      "inference_rules": "\u00a77",
+      "canonical_derivation_skeletons": "\u00a78.2-\u00a78.4",
+      "fact_sufficiency_test": "\u00a78.5",
+      "expected_claim_classification": "\u00a78.6",
+      "producer_kernel_capability_boundary": "\u00a79.3",
+      "verifier_obligations_K1_K5_rejection_ladder": "\u00a79",
+      "adversarial_transformations_and_expected_codes": "\u00a710",
+      "independence_requirement": "\u00a711",
+      "decision_rule_and_precedence": "\u00a712.2",
+      "producer_verifier_boundary": "\u00a72, \u00a79.1",
+      "freeze_anchor_and_topology": "\u00a714.1, \u00a714.2",
+      "run_identity_and_total_run_chain": "\u00a714.3"
+    }
+  },
+  "spec_facts_identity": {
+    "$comment": "NOT an M0-pinned protocol surface. \u00a714.3 enumerates the byte-pinned artifacts \u2014 the ruleset, the two schemas, and the two capability declarations \u2014 and this is not among them. Adding it would create a new protocol surface after the freeze.",
+    "normative_identity": {
+      "document": "docs/experiments/E5-finding-certificates-preregistration.md",
+      "blob_sha": "b4f78b572a3de5cdd446524e32f9ec85a264ea5c",
+      "section": "\u00a75.4",
+      "note": "\u00a75.4 already defines all 27 facts, including their spec_revision. That is the authority."
+    },
+    "transcription_artifact": {
+      "path": "experiments/e5/spec-facts/E5-SPEC-FACTS-v1.json",
+      "status": "transcription artifact \u2014 NOT an additional M0-pinned protocol surface",
+      "note": "verify-m0.py may emit this file's git blob and SHA-256 as INFORMATIONAL audit output. Neither is an M0 obligation and neither gates anything."
+    },
+    "why_this_is_not_a_gap": "At a real run the facts enter a bundle whose digest is pinned in E5-M1, and the extractor and producer revisions are pinned per run (\u00a714.3). A later change to the transcription artifact is therefore a change of implementation or of an input bundle \u2014 recorded as such \u2014 not a silent substitution of frozen \u00a75.4."
+  }
+}
